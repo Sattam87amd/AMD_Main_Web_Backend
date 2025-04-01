@@ -2,9 +2,9 @@ import Register from '../model/registerModel.js';
 
 // Register User
 export const registerUser = async (req, res) => {
-    const { email, firstName, lastName } = req.body;
+    const { email, firstName, lastName, gender } = req.body;
 
-    if (!email || !firstName || !lastName) {
+    if (!email || !firstName || !lastName || !gender) {
         return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -15,7 +15,7 @@ export const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already registered' });
         }
 
-        const newUser = await Register.create({ email, firstName, lastName });
+        const newUser = await Register.create({ email, firstName, lastName, gender });
         res.status(201).json({ message: 'User registered successfully', user: newUser });
 
     } catch (error) {

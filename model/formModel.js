@@ -4,31 +4,28 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
-      // default: "John",
       required: true,
     },
     lastName: {
       type: String,
-      // default: "Doe",
       required: true,
     },
     mobileNumber: {
       type: String,
-      default: "0000000000",
       required: true,
     },
     emailAddress: {
       type: String,
-      default: "default@example.com",
       required: true,
+      unique: true,
     },
-    gender:{
+    gender: {
       type: String,
+      enum: ['Male', 'Female', 'Prefer not to say'],
       required: true,
     },
     socialMediaLink: {
       type: String,
-      required: true,
     },
     areaOfExpertise: {
       type: String,
@@ -36,15 +33,12 @@ const userSchema = new mongoose.Schema(
     },
     experience: {
       type: String,
-      required: true,
     },
-    certificate: {
-      type: String, // This will store the URL of the uploaded PDF
-      required: true,
+    certificationFile: {
+      type: String, // Path to the uploaded certification file
     },
-    photo: {
-      type: String,
-      required: true,
+    photoFile: {
+      type: String, // Path to the uploaded photo file
     },
   },
   { timestamps: true }
