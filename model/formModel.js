@@ -4,12 +4,12 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
-      default: "John",
+      // default: "John",
       required: true,
     },
     lastName: {
       type: String,
-      default: "Doe",
+      // default: "Doe",
       required: true,
     },
     mobileNumber: {
@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
     emailAddress: {
       type: String,
       default: "default@example.com",
+      required: true,
+    },
+    gender:{
+      type: String,
       required: true,
     },
     socialMediaLink: {
@@ -36,6 +40,10 @@ const userSchema = new mongoose.Schema(
     },
     certificate: {
       type: String, // This will store the URL of the uploaded PDF
+      required: true,
+    },
+    photo: {
+      type: String,
       required: true,
     },
   },
