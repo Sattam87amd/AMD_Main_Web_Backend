@@ -4,20 +4,27 @@ import path from "path";
 
 export const createUser = async (req, res) => {
   try {
-    const { socialMediaLink, areaOfExpertise, experience } = req.body;
+    const { firstName, lastName, email, gender, mobile, socialLink, areaOfExpertise, experience } = req.body;
 
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Certificate PDF is required" });
+    // Check if required files are uploaded
+    if (!req.files || !req.files.certification || !req.files.photo) {
+      return res.status(400).json({ success: false, message: "Both certificate and photo files are required" });
     }
-    const certificatePath = req.file.path;
+
+    const certificatePath = req.files.certification[0].path;
+    const photoPath = req.files.photo[0].path;
 
     const newUser = new User({
-      socialMediaLink,
+      firstName,
+      lastName,
+      email,
+      gender,
+      mobile,
+      socialLink,
       areaOfExpertise,
       experience,
-      certificate: certificatePath,
+      certificationFile: certificatePath,
+      photoFile: photoPath
     });
 
     await newUser.save();
@@ -74,4 +81,3 @@ export const getUserById = async (req, res) => {
     });
   }
 };
-

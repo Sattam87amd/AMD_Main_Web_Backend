@@ -15,6 +15,11 @@ const registerSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Last name is required'],
     },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Prefer not to'],
+        required: [true, 'Gender is required'],
+    },
 }, {
     timestamps: true,
 });
