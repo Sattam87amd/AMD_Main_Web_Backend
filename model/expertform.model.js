@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     mobileNumber: {
       type: String,
       required: true,
+      unique: true, // Ensure mobile numbers are unique
     },
     emailAddress: {
       type: String,

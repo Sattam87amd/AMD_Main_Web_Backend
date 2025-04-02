@@ -1,8 +1,8 @@
 import twilio from 'twilio';
 import Login from '../model/loginModel.js';
+import Form from '../model/formModel.js'; // To check if the user is registered in formModel
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
 // Twilio client
@@ -24,56 +24,81 @@ const sendOtp = async (phone, otp) => {
     console.log(`OTP sent to ${phone}`);
   } catch (error) {
     console.error('Error sending OTP via Twilio:', error);
+    throw new Error('Failed to send OTP');
   }
+};
+
+// Normalize the phone number by removing non-numeric characters
+const normalizePhoneNumber = (phone) => {
+  return phone.replace(/[^\d]/g, ""); // This will remove all non-numeric characters
 };
 
 // Request OTP Controller
 export const requestOtp = async (req, res) => {
-  const { phone } = req.body;
+const { phone } = req.body;
 
-  if (!phone) {
-    return res.status(400).json({ message: 'Phone number is required' });
+console.log('Received phone number:', phone);
+
+if (!phone) {
+  return res.status(400).json({ message: 'Phone number is required' });
+}
+
+try {
+  // Normalize the phone number to ensure consistency
+  const normalizedPhone = normalizePhoneNumber(phone);
+
+  // Check if the phone number exists in the Form collection (Expert's form)
+  const existingUser = await Form.findOne({ mobileNumber: normalizedPhone });
+
+  if (!existingUser) {
+    return res.status(400).json({ message: 'Please sign up first' });
   }
 
   const otp = generateOTP();
   const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
 
-  try {
-    // Store OTP in database
-    await Login.findOneAndUpdate(
-      { phone },
-      { otp, otpExpires },
-      { upsert: true, new: true }
-    );
+  // Store OTP in the Login collection
+  await Login.findOneAndUpdate(
+    { phone: normalizedPhone },
+    { otp, otpExpires },
+    { upsert: true, new: true }
+  );
 
-    // Send OTP using Twilio
-    await sendOtp(phone, otp);
+  // Send OTP using Twilio
+  await sendOtp(phone, otp);
 
-    res.status(200).json({ message: 'OTP sent successfully' });
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
-  }
+  res.status(200).json({ message: 'OTP sent successfully' });
+} catch (error) {
+  console.error('Error sending OTP:', error);
+  res.status(500).json({ message: 'Failed to send OTP' });
+}
 };
 
 // Verify OTP Controller
 export const verifyOtp = async (req, res) => {
-  const { phone, otp } = req.body;
+const { phone, otp } = req.body;
 
-  if (!phone || !otp) {
-    return res.status(400).json({ message: 'Phone and OTP are required' });
+if (!phone || !otp) {
+  return res.status(400).json({ message: 'Phone and OTP are required' });
+}
+
+try {
+  // Normalize the phone number to ensure consistency
+  const normalizedPhone = normalizePhoneNumber(phone);
+
+  const user = await Login.findOne({ phone: normalizedPhone });
+
+  if (!user) {
+    return res.status(400).json({ message: 'Phone number not found in database' });
   }
 
-  try {
-    const user = await Login.findOne({ phone });
-
-    if (!user || user.otp !== otp || user.otpExpires < new Date()) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
-
-    res.status(200).json({ message: 'OTP verified successfully' });
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
-    res.status(500).json({ message: 'Failed to verify OTP' });
+  if (user.otp !== otp || user.otpExpires < new Date()) {
+    return res.status(400).json({ message: 'Invalid or expired OTP' });
   }
+
+  res.status(200).json({ message: 'OTP verified successfully' });
+} catch (error) {
+  console.error('Error verifying OTP:', error);
+  res.status(500).json({ message: 'Failed to verify OTP' });
+}
 };
