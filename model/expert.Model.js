@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-// Define the schema for the expert form
-const expertFormSchema = new mongoose.Schema(
+// Expert Schema
+const expertSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
@@ -42,11 +42,33 @@ const expertFormSchema = new mongoose.Schema(
     photoFile: {
       type: String, // Path to the uploaded photo file
     },
+    // Login Information
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+      match: /^[6-9]\d{9}$/, // Basic validation for Indian phone numbers
+    },
+    otp: {
+      type: String,
+      required: true,
+    },
+    otpExpires: {
+      type: Date,
+      required: true,
+    },
+    // Register Information
+    email: {
+        type: String,
+        required: [true, 'Email is required'],
+        unique: true,
+        trim: true,
+    },
   },
   { timestamps: true, collection: 'expert' }
 );
 
-// Define the model with the name 'Expert' and export it
-const Expert = mongoose.model("Expert", expertFormSchema);
+// Expert Model
+const Expert = mongoose.model("Expert", expertSchema);
 
 export default Expert;

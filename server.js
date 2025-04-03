@@ -3,10 +3,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import connectDB from './db/db_config.js'; // Database configuration import
-import formRoutes from './routes/expertform.Routes.js';
-import loginRoutes from './routes/expertlogin.Routes.js';
-import registerRoutes from './routes/expertregister.Routes.js';
-import userrouter from './routes/userlogin.route.js';
+import expertrouter from './routes/expert.Routes.js';
+import userrouter from './routes/user.Route.js';
 
 
 // Load environment variables
@@ -31,10 +29,17 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-app.use('/api/forms', formRoutes);
-app.use('/api/auth', loginRoutes);
+// app.use('/api/forms', formRoutes);
+// app.use('/api/auth', loginRoutes);
+// app.use('/api/register', registerRoutes);
+
+// app.use('/api/user', userrouter)
+// app.use('/api/expert', expertrouter)
+// app.use('/api/admin', adminrouter)
+
 app.use('/api/userauth', userrouter);
-app.use('/api/register', registerRoutes);
+
+
 
 // Define the Port
 const PORT = process.env.PORT || 5000;
