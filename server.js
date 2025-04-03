@@ -5,8 +5,8 @@ import path from 'path';
 import connectDB from './db/db_config.js'; // Database configuration import
 import expertrouter from './routes/expert.Routes.js';
 import userrouter from './routes/user.Route.js';
-
-
+import VerifyJwt from './middleware/auth.middleware.js';
+import { router_usertoexpert } from './routes/usertoexpertsession.routes.js';
 // Load environment variables
 dotenv.config();
 
@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/userauth', userrouter);
 
-
+app.use('/api/session', VerifyJwt, router_usertoexpert)
 
 // Define the Port
 const PORT = process.env.PORT || 5000;
