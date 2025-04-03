@@ -1,4 +1,3 @@
-import express from 'express';
 import { ExpertToExpertSession } from '../model/experttoexpertsession.model.js';
 import jwt from 'jwt';
 import dotenv from 'dotenv';
@@ -76,3 +75,5 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
       });
     }
   });
+
+  export {bookExpertToExpertSession}

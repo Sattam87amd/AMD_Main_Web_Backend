@@ -1,7 +1,6 @@
 import UserToExpertSession from "../model/UserToExpertSession.js"; // Import the model for user-to-expert sessions
 import jwt from "jsonwebtoken"; // For JWT token validation
 import dotenv from "dotenv";
-import { initiatePayment, completePayment } from "../paymentService.js"; // Assuming you have a service for handling payments
 import asyncHandler from '../utils/asyncHandler.js'
 
 dotenv.config();
