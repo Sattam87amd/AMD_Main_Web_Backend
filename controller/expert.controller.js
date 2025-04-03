@@ -1,6 +1,6 @@
-import Expert from "../model/expert.Model.js"; // Combined expert model
-import ExpertLogin from "../model/expert.Model.js"; // Combined login part of expert model
-import ExpertRegister from "../model/expert.Model.js"; // Combined registration part of expert model
+import Expert from "../model/expert.model.js"; // Combined expert model
+import ExpertLogin from "../model/expert.model.js"; // Combined login part of expert model
+import ExpertRegister from "../model/expert.model.js"; // Combined registration part of expert model
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import fs from "fs";

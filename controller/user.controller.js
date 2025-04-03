@@ -1,6 +1,6 @@
 import twilio from 'twilio';
-import Userlogin from '../model/user.Model.js';
-import User from '../model/user.Model.js'; // Assuming you're using a User model for registration
+import Userlogin from '../model/user.model.js';
+import User from '../model/user.model.js'; // Assuming you're using a User model for registration
 import dotenv from 'dotenv';
 
 dotenv.config();
