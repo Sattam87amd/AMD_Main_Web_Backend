@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+// Define the schema for the expert form
+const expertFormSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
@@ -42,9 +43,10 @@ const userSchema = new mongoose.Schema(
       type: String, // Path to the uploaded photo file
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: 'expert' }
 );
 
-const User = mongoose.model("expertRegisterForm", userSchema);
+// Define the model with the name 'Expert' and export it
+const Expert = mongoose.model("Expert", expertFormSchema);
 
-export default User;
+export default Expert;

@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
-import connectDB from './db/db_config.js';
+import connectDB from './db/db_config.js'; // Database configuration import
 import formRoutes from './routes/formRoutes.js';
 import loginRoutes from './routes/loginRoutes.js';
 import registerRoutes from './routes/registerRoutes.js';
@@ -20,7 +20,7 @@ app.use(express.json()); // Parse incoming JSON data
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// Connect to MongoDB Atlas
+// Connect to MongoDB (now Compass via local MongoDB URI)
 connectDB();
 
 // Default Test Route
