@@ -113,7 +113,8 @@ const verifyOtp = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: 'OTP verified successfully. Redirecting to home page...',
-        redirectToHome: true, // Indicate to the frontend that the user should be redirected to home page
+        isNewUser:true,
+        redirectToHome: true    // Indicate to the frontend that the user should be redirected to home page
       });
     }
 
@@ -122,6 +123,7 @@ const verifyOtp = async (req, res) => {
       success: true,
       message: 'OTP verified successfully. Redirecting to register page...',
       redirectToRegister: true, // Indicate to the frontend that the user should be redirected to the registration page
+      isNewUser:false
     });
   } catch (error) {
     console.error('Error verifying OTP:', error);
