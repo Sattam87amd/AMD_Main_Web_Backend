@@ -1,19 +1,16 @@
 import twilio from 'twilio';
-import ExpertLogin from './model/expertlogin.model.js';  // Changed from Login to ExpertLogin
-import ExpertForm from './model/expertform.model.js'; // Check if expert exists in the expert collection
+import Login from '../model/expertlogin.Model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Twilio client
+// Twilio client setup
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // Generate a random 4-digit OTP
-const generateOTP = () => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-};
+const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-// Send OTP via SMS using Twilio API
+// Send OTP via SMS using Twilio
 const sendOtp = async (phone, otp) => {
   try {
     await client.messages.create({
@@ -28,12 +25,10 @@ const sendOtp = async (phone, otp) => {
   }
 };
 
-// Normalize the phone number by removing non-numeric characters
-const normalizePhoneNumber = (phone) => {
-  return phone.replace(/[^\d]/g, ""); // This will remove all non-numeric characters
-};
+// Normalize the phone number (remove non-numeric characters)
+const normalizePhoneNumber = (phone) => phone.replace(/[^\d]/g, "");
 
-// Request OTP Controller
+// 📌 Request OTP (Login Only)
 export const requestOtp = async (req, res) => {
   const { phone } = req.body;
 
@@ -44,27 +39,18 @@ export const requestOtp = async (req, res) => {
   }
 
   try {
-    // Normalize the phone number to ensure consistency
     const normalizedPhone = normalizePhoneNumber(phone);
-
-    // Check if the phone number exists in the Expert collection
-    const existingExpert = await ExpertForm.findOne({ mobileNumber: normalizedPhone });
-
-    if (!existingExpert) {
-      return res.status(400).json({ message: 'Please sign up first' });
-    }
-
     const otp = generateOTP();
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
 
-    // Store OTP in the ExpertLogin collection
-    await ExpertLogin.findOneAndUpdate(
+    // Store OTP in Login collection (create entry if not exists)
+    await Login.findOneAndUpdate(
       { phone: normalizedPhone },
       { otp, otpExpires },
       { upsert: true, new: true }
     );
 
-    // Send OTP using Twilio
+    // Send OTP
     await sendOtp(phone, otp);
 
     res.status(200).json({ message: 'OTP sent successfully' });
@@ -74,7 +60,7 @@ export const requestOtp = async (req, res) => {
   }
 };
 
-// Verify OTP Controller
+// 📌 Verify OTP (Login)
 export const verifyOtp = async (req, res) => {
   const { phone, otp } = req.body;
 
@@ -83,16 +69,14 @@ export const verifyOtp = async (req, res) => {
   }
 
   try {
-    // Normalize the phone number to ensure consistency
     const normalizedPhone = normalizePhoneNumber(phone);
+    const user = await Login.findOne({ phone: normalizedPhone });
 
-    const expert = await ExpertLogin.findOne({ phone: normalizedPhone });
-
-    if (!expert) {
-      return res.status(400).json({ message: 'Phone number not found in database' });
+    if (!user) {
+      return res.status(400).json({ message: 'OTP request not found. Please request a new OTP.' });
     }
 
-    if (expert.otp !== otp || expert.otpExpires < new Date()) {
+    if (user.otp !== otp || user.otpExpires < new Date()) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
