@@ -24,6 +24,6 @@ const registerSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const Register = mongoose.model('Register', registerSchema);
+const ExpertRegister = mongoose.model('ExpertRegister', registerSchema); // Change model name to ExpertRegister
 
-export default Register;
+export default ExpertRegister;
