@@ -1,5 +1,5 @@
 import express from "express";
-import upload from "../middleware/upload.js";
+import upload from "../middleware/expertupload.middleware.js";
 import { createUser, getUsers, getUserById } from "../controller/formController.js";
 
 const router = express.Router();

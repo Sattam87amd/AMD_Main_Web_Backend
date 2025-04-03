@@ -31,6 +31,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/forms', formRoutes);
 app.use('/api/auth', loginRoutes);
+app.use('/api/userauth', userrouter);
 app.use('/api/register', registerRoutes);
 
 // Define the Port
