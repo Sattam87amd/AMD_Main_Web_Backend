@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const UserSchemalogin = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
     {
         phone: {
             type: String,
@@ -16,9 +16,12 @@ const UserSchemalogin = new mongoose.Schema(
             type: Date,
             required: true,
         },
+        role:{
+            type:String,
+            enum:["user"],
+        }
     }, { timestamps: true,collection:"user" }
 )
 
-const Userlogin= mongoose.model("login",UserSchemalogin)
+export const User= mongoose.model("login",userSchema)
 
-export default Userlogin

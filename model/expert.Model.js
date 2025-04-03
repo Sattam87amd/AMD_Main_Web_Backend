@@ -16,11 +16,6 @@ const expertSchema = new mongoose.Schema(
       required: true,
       unique: true, // Ensure mobile numbers are unique
     },
-    emailAddress: {
-      type: String,
-      required: true,
-      unique: true,
-    },
     gender: {
       type: String,
       enum: ['Male', 'Female', 'Prefer not to say'],
@@ -64,11 +59,14 @@ const expertSchema = new mongoose.Schema(
         unique: true,
         trim: true,
     },
+    role:{
+      type:String,
+      enum: ["expert"],
+    }
   },
   { timestamps: true, collection: 'expert' }
 );
 
 // Expert Model
-const Expert = mongoose.model("Expert", expertSchema);
+export const Expert = mongoose.model("Expert", expertSchema);
 
-export default Expert;
