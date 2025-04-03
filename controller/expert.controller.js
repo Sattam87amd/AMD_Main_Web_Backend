@@ -1,6 +1,4 @@
-import Expert from "../model/expert.model.js"; // Combined expert model
-import ExpertLogin from "../model/expert.model.js"; // Combined login part of expert model
-import ExpertRegister from "../model/expert.model.js"; // Combined registration part of expert model
+import {Expert} from "../model/expert.model.js" // Combined expert model
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import fs from "fs";
@@ -122,7 +120,7 @@ export const requestOtp = async (req, res) => {
   console.log('Received phone number:', phone);
 
   if (!phone) {
-    return res.status(400).json({ success: false, message: 'Phone number is required' });
+    return res.status(400).json({ message: 'Phone number is required' });
   }
 
   try {
@@ -133,7 +131,7 @@ export const requestOtp = async (req, res) => {
     const existingExpert = await Expert.findOne({ mobileNumber: normalizedPhone });
 
     if (!existingExpert) {
-      return res.status(400).json({ success: false, message: 'Please sign up first' });
+      return res.status(400).json({ message: 'Please sign up first' });
     }
 
     // Generate OTP and send it using Twilio
@@ -147,10 +145,10 @@ export const requestOtp = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    res.status(200).json({ success: true, message: 'OTP sent successfully' });
+    res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Error sending OTP:', error);
-    res.status(500).json({ success: false, message: 'Failed to send OTP' });
+    res.status(500).json({ message: 'Failed to send OTP' });
   }
 };
 
@@ -159,7 +157,7 @@ export const verifyOtp = async (req, res) => {
   const { phone, otp } = req.body;
 
   if (!phone || !otp) {
-    return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
+    return res.status(400).json({ message: 'Phone and OTP are required' });
   }
 
   try {
@@ -169,17 +167,17 @@ export const verifyOtp = async (req, res) => {
     const expert = await ExpertLogin.findOne({ phone: normalizedPhone });
 
     if (!expert) {
-      return res.status(400).json({ success: false, message: 'Phone number not found in database' });
+      return res.status(400).json({ message: 'Phone number not found in database' });
     }
 
     if (expert.otp !== otp || expert.otpExpires < new Date()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
-    res.status(200).json({ success: true, message: 'OTP verified successfully' });
+    res.status(200).json({ message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    res.status(500).json({ success: false, message: 'Failed to verify OTP' });
+    res.status(500).json({ message: 'Failed to verify OTP' });
   }
 };
 
@@ -188,7 +186,7 @@ export const registerExpert = async (req, res) => {
   const { email, firstName, lastName, gender, mobile } = req.body;
 
   if (!email || !firstName || !lastName || !gender || !mobile) {
-    return res.status(400).json({ success: false, message: 'All fields are required' });
+    return res.status(400).json({ message: 'All fields are required' });
   }
 
   // Log the phone number to confirm it's being received correctly
@@ -198,14 +196,14 @@ export const registerExpert = async (req, res) => {
     const existingExpert = await ExpertRegister.findOne({ email });
 
     if (existingExpert) {
-      return res.status(400).json({ success: false, message: 'Expert already registered' });
+      return res.status(400).json({ message: 'Expert already registered' });
     }
 
     const newExpert = await ExpertRegister.create({ email, firstName, lastName, gender, mobile });
-    res.status(201).json({ success: true, message: 'Expert registered successfully', expert: newExpert });
+    res.status(201).json({ message: 'Expert registered successfully', expert: newExpert });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server Error', error });
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
 
@@ -213,15 +211,8 @@ export const registerExpert = async (req, res) => {
 export const getAllExperts = async (req, res) => {
   try {
     const experts = await ExpertRegister.find();
-    res.status(200).json({
-      success: true,
-      data: experts,
-    });
+    res.status(200).json(experts);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error,
-    });
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
