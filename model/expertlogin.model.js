@@ -17,6 +17,6 @@ const loginSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-const Login = mongoose.model('Login', loginSchema);
+const ExpertLogin = mongoose.model('ExpertLogin', loginSchema); // Change model name to ExpertLogin
 
-export default Login;
+export default ExpertLogin;
