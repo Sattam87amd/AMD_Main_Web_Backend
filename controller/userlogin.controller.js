@@ -70,7 +70,7 @@ export const verifyOtp = async (req, res) => {
 
   try {
     const normalizedPhone = normalizePhoneNumber(phone);
-    const user = await Login.findOne({ phone: normalizedPhone });
+    const user = await Userlogin.findOne({ phone: normalizedPhone });
 
     if (!user) {
       return res.status(400).json({ message: 'OTP request not found. Please request a new OTP.' });
@@ -80,7 +80,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
-    res.status(200).json({ message: 'OTP verified successfully' });
+    res.status(200).json({success: true, message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ message: 'Failed to verify OTP' });
