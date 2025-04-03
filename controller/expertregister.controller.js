@@ -1,4 +1,4 @@
-import ExpertRegister from './model/expertregister.model.js'; // Changed to ExpertRegister model
+import ExpertRegister from '../model/expertregister.model.js'; // Changed to ExpertRegister model
 
 // Register Expert
 export const registerExpert = async (req, res) => {

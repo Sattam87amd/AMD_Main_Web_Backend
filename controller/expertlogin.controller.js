@@ -1,6 +1,6 @@
 import twilio from 'twilio';
-import ExpertLogin from './model/expertlogin.model.js';  // Changed from Login to ExpertLogin
-import ExpertForm from './model/expertform.model.js'; // Check if expert exists in the expert collection
+import ExpertLogin from '../model/expertlogin.model.js';  // Changed from Login to ExpertLogin
+import ExpertForm from '../model/expertform.model.js'; // Check if expert exists in the expert collection
 import dotenv from 'dotenv';
 
 dotenv.config();

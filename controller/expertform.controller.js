@@ -1,4 +1,4 @@
-import Expert from "./model/expertform.model.js"; // Update to Expert model
+import Expert from "../model/expertform.model.js"; // Update to Expert model
 import fs from "fs";
 import path from "path";
 

@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import Login from '../model/expertlogin.Model.js';
+import Userlogin from '../model/userlogin.model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -44,7 +44,7 @@ export const requestOtp = async (req, res) => {
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
 
     // Store OTP in Login collection (create entry if not exists)
-    await Login.findOneAndUpdate(
+    await Userlogin.findOneAndUpdate(
       { phone: normalizedPhone },
       { otp, otpExpires },
       { upsert: true, new: true }

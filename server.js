@@ -3,9 +3,11 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import connectDB from './db/db_config.js'; // Database configuration import
-import formRoutes from './routes/formRoutes.js';
-import loginRoutes from './routes/loginRoutes.js';
-import registerRoutes from './routes/registerRoutes.js';
+import formRoutes from './routes/expertform.Routes.js';
+import loginRoutes from './routes/expertlogin.Routes.js';
+import registerRoutes from './routes/expertregister.Routes.js';
+import userrouter from './routes/userlogin.route.js';
+
 
 // Load environment variables
 dotenv.config();
