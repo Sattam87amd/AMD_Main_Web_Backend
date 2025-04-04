@@ -20,19 +20,12 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["user"],
         }
-<<<<<<< HEAD
     }, 
     { 
         timestamps: true,
         collection: "user" 
     }
 );
-=======
-    }, { timestamps: true,collection:"user" }
-)
-
-export const User= mongoose.model("User",userSchema)
->>>>>>> fa12fb33286654705c8f93135eeb0f646685b649
 
 // Avoid overwriting model if already defined
 export const User = mongoose.models.User || mongoose.model("User", userSchema);
