@@ -16,12 +16,16 @@ const userSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
-        role:{
-            type:String,
-            enum:["user"],
+        role: {
+            type: String,
+            enum: ["user"],
         }
-    }, { timestamps: true,collection:"user" }
-)
+    }, 
+    { 
+        timestamps: true,
+        collection: "user" 
+    }
+);
 
-export const User= mongoose.model("login",userSchema)
-
+// Avoid overwriting model if already defined
+export const User = mongoose.models.User || mongoose.model("User", userSchema);

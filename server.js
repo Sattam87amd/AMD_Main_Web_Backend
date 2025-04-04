@@ -38,7 +38,6 @@ app.get('/', (req, res) => {
 // app.use('/api/admin', adminrouter)
 
 app.use('/api/userauth', userrouter);
-app.use('/api/adminauth', adminrou)
 
 app.use('/api/session', VerifyJwt, router_usertoexpert)
 

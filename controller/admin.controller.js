@@ -1,4 +1,4 @@
-import { Admin } from '../model/admin.model';
+import { Admin } from '../model/admin.model.js';
 import bcrypt from 'bcryptjs';
 
 // Admin Login
