@@ -1,218 +1,159 @@
-import {Expert} from "../model/expert.model.js" // Combined expert model
+import { Expert } from "../model/expert.model.js";
 import twilio from 'twilio';
 import dotenv from 'dotenv';
-import fs from "fs";
-import path from "path";
+import jwt from "jsonwebtoken";
+import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
+import upload from "../middleware/multer.middleware.js";
+import { User } from "../model/user.model.js"; 
 
-// Load environment variables
+
 dotenv.config();
-
-// Twilio client
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// Send OTP via SMS using Twilio API
+// Helper functions
+const normalizePhoneNumber = (phone) => phone.replace(/[^\d]/g, "");
 const sendOtp = async (phone) => {
   try {
-    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Twilio is used to send OTP, but we generate it here
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit OTP
     await client.messages.create({
-      body: `Your verification code is: ${otp}`,
+      body: `Your verification code is: ${otp}`, // ✅ Fixed string interpolation
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to ${phone}`);
-    return otp; // Return the OTP generated for storage in the database
+    console.log(`OTP sent to ${phone}`); // ✅ Fixed console log
+    return otp;
   } catch (error) {
-    console.error('Error sending OTP via Twilio:', error);
-    throw new Error('Failed to send OTP');
+    console.error("Error sending OTP via Twilio:", error);
+    throw new ApiError(500, "Failed to send OTP");
   }
 };
 
-// Normalize the phone number by removing non-numeric characters
-const normalizePhoneNumber = (phone) => {
-  return phone.replace(/[^\d]/g, ""); // This will remove all non-numeric characters
-};
-
-// --- Expert Form Controller ---
-export const createExpert = async (req, res) => {
-  try {
-    const { firstName, lastName, email, gender, mobile, socialLink, areaOfExpertise, experience } = req.body;
-
-    // Check if required files are uploaded
-    if (!req.files || !req.files.certification || !req.files.photo) {
-      return res.status(400).json({ success: false, message: "Both certificate and photo files are required" });
-    }
-
-    const certificatePath = req.files.certification[0].path;
-    const photoPath = req.files.photo[0].path;
-
-    const newExpert = new Expert({
-      firstName,
-      lastName,
-      email,
-      gender,
-      mobile,
-      socialLink,
-      areaOfExpertise,
-      experience,
-      certificationFile: certificatePath,
-      photoFile: photoPath
-    });
-
-    await newExpert.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Expert created successfully",
-      data: newExpert,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// Get all experts
-export const getExperts = async (req, res) => {
-  try {
-    const experts = await Expert.find();
-    res.status(200).json({
-      success: true,
-      data: experts,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// Get a single expert by ID
-export const getExpertById = async (req, res) => {
-  try {
-    const expert = await Expert.findById(req.params.id);
-
-    if (!expert) {
-      return res.status(404).json({
-        success: false,
-        message: "Expert not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: expert,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// --- Expert Login Controller ---
-export const requestOtp = async (req, res) => {
+export const requestOtp = asyncHandler(async (req, res) => {
   const { phone } = req.body;
+  if (!phone) throw new ApiError(400, "Phone number required");
 
-  console.log('Received phone number:', phone);
+  const normalizedPhone = normalizePhoneNumber(phone);
 
-  if (!phone) {
-    return res.status(400).json({ message: 'Phone number is required' });
+  // Check if number exists in user collection
+  const existingUser = await User.findOne({ phone: normalizedPhone });
+  if (existingUser) {
+    throw new ApiError(400, "You've already registered as a user with this number");
   }
 
-  try {
-    // Normalize the phone number to ensure consistency
-    const normalizedPhone = normalizePhoneNumber(phone);
+  // Check if number exists in expert collection
+  let expert = await Expert.findOne({ phone: normalizedPhone });
 
-    // Check if the phone number exists in the Expert collection
-    const existingExpert = await Expert.findOne({ mobileNumber: normalizedPhone });
+  // If expert exists but isn't fully registered
+  const isNewExpert = !expert?.email;
 
-    if (!existingExpert) {
-      return res.status(400).json({ message: 'Please sign up first' });
-    }
+  // Generate and send OTP
+  const otp = await sendOtp(phone);
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    // Generate OTP and send it using Twilio
-    const otp = await sendOtp(phone);
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
-
-    // Store OTP in the ExpertLogin collection
-    await ExpertLogin.findOneAndUpdate(
-      { phone: normalizedPhone },
-      { otp, otpExpires },
-      { upsert: true, new: true }
-    );
-
-    res.status(200).json({ message: 'OTP sent successfully' });
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
+  if (expert) {
+    // Update existing expert record
+    expert.otp = otp;
+    expert.otpExpires = otpExpires;
+  } else {
+    // Create new expert record
+    expert = new Expert({
+      phone: normalizedPhone,
+      otp,
+      otpExpires,
+      role: "expert"
+    });
   }
-};
 
-// Verify OTP Controller
-export const verifyOtp = async (req, res) => {
+  await expert.save();
+
+  res.status(200).json(
+    new ApiResponse(200, { isNewExpert }, "OTP sent successfully")
+  );
+});
+
+export const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp } = req.body;
+  if (!phone || !otp) throw new ApiError(400, "Phone and OTP required");
 
-  if (!phone || !otp) {
-    return res.status(400).json({ message: 'Phone and OTP are required' });
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const expert = await Expert.findOne({ phone: normalizedPhone });
+
+  if (!expert || expert.otp !== otp || new Date() > expert.otpExpires) {
+    throw new ApiError(400, "Invalid or expired OTP");
   }
 
-  try {
-    // Normalize the phone number to ensure consistency
-    const normalizedPhone = normalizePhoneNumber(phone);
+  expert.otp = undefined;
+  expert.otpExpires = undefined;
+  await expert.save();
 
-    const expert = await ExpertLogin.findOne({ phone: normalizedPhone });
-
-    if (!expert) {
-      return res.status(400).json({ message: 'Phone number not found in database' });
-    }
-
-    if (expert.otp !== otp || expert.otpExpires < new Date()) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
-
-    res.status(200).json({ message: 'OTP verified successfully' });
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
-    res.status(500).json({ message: 'Failed to verify OTP' });
-  }
-};
-
-// --- Expert Register Controller ---
-export const registerExpert = async (req, res) => {
-  const { email, firstName, lastName, gender, mobile } = req.body;
-
-  if (!email || !firstName || !lastName || !gender || !mobile) {
-    return res.status(400).json({ message: 'All fields are required' });
+  if (!expert.email) {
+    return res.status(200).json(new ApiResponse(200, 
+      { isNewExpert: true }, 
+      "OTP verified - complete registration"));
   }
 
-  // Log the phone number to confirm it's being received correctly
-  console.log('Received phone number for registration:', mobile);
+  const token = jwt.sign(
+    { _id: expert._id, phone: expert.phone, role: "expert" },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
 
-  try {
-    const existingExpert = await ExpertRegister.findOne({ email });
+  res.status(200).json(new ApiResponse(200, 
+    { isNewExpert: false, token }, 
+    "OTP verified - login successful"));
+});
 
-    if (existingExpert) {
-      return res.status(400).json({ message: 'Expert already registered' });
-    }
-
-    const newExpert = await ExpertRegister.create({ email, firstName, lastName, gender, mobile });
-    res.status(201).json({ message: 'Expert registered successfully', expert: newExpert });
-
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
+// Registration Controller
+export const registerExpert = asyncHandler(async (req, res) => {
+  const { phone, email, firstName, lastName, gender } = req.body;
+  if (!phone || !email || !firstName || !lastName || !gender) {
+    throw new ApiError(400, "All fields required");
   }
-};
 
-// Get All Experts
-export const getAllExperts = async (req, res) => {
-  try {
-    const experts = await ExpertRegister.find();
-    res.status(200).json(experts);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const expert = await Expert.findOne({ phone: normalizedPhone });
+  if (!expert) throw new ApiError(400, "OTP verification required first");
+
+  expert.email = email;
+  expert.firstName = firstName;
+  expert.lastName = lastName;
+  expert.gender = gender;
+  await expert.save();
+
+  res.status(201).json(new ApiResponse(201, expert, "Expert registered"));
+});
+
+// Expert Profile Controllers
+export const createExpert = asyncHandler(async (req, res) => {
+  const { socialLink, areaOfExpertise, experience } = req.body;
+  const files = req.files;
+  
+  if (!files?.certification?.[0] || !files?.photo?.[0]) {
+    throw new ApiError(400, "Certification and photo required");
   }
-};
+
+  const expert = await Expert.findById(req.expert._id);
+  if (!expert) throw new ApiError(404, "Expert not found");
+
+  expert.socialLink = socialLink;
+  expert.areaOfExpertise = areaOfExpertise;
+  expert.experience = experience;
+  expert.certificationFile = files.certification[0].path;
+  expert.photoFile = files.photo[0].path;
+  await expert.save();
+
+  res.status(201).json(new ApiResponse(201, expert, "Profile completed"));
+});
+
+export const getExperts = asyncHandler(async (req, res) => {
+  const experts = await Expert.find();
+  res.status(200).json(new ApiResponse(200, experts, "Experts retrieved"));
+});
+
+export const getExpertById = asyncHandler(async (req, res) => {
+  const expert = await Expert.findById(req.params.id);
+  if (!expert) throw new ApiError(404, "Expert not found");
+  res.status(200).json(new ApiResponse(200, expert, "Expert retrieved"));
+});
