@@ -1,7 +1,14 @@
-import UserToExpertSession from '../model/UserToExpertSession.js'; // Import the model for user-to-expert sessions
+import UserToExpertSession from "../model/UserToExpertSession.js"; // Import the model for user-to-expert sessions
+import jwt from "jsonwebtoken"; // For JWT token validation
+import dotenv from "dotenv";
+import asyncHandler from '../utils/asyncHandler.js'
+
+dotenv.config();
+
+import { UserToExpertSession } from '../model/UserToExpertAppointment.js'; // Import the session model
 import jwt from 'jsonwebtoken'; // For JWT token validation
 import dotenv from 'dotenv';
-import { initiatePayment, completePayment } from '../paymentService.js'; // Assuming you have a service for handling payments
+import asyncHandler from '../utils/asyncHandler.js'; // Assuming you have an asyncHandler utility
 
 dotenv.config();
 
@@ -16,9 +23,9 @@ const checkAvailability = async (expertId, sessionDate, sessionTime) => {
   return !existingSession; // Returns true if no session is found, i.e., time is available
 };
 
-// Book session controller
-export const bookSession = async (req, res) => {
-  const { token, expertId, category, sessionDate, sessionTime, duration, optionalNote } = req.body;
+// Book session controller wrapped in asyncHandler
+const bookSession = asyncHandler(async (req, res) => {
+  const { token, expertId, category, date, time, duration, optionalNote } = req.body;
 
   if (!token) {
     return res.status(400).json({ message: 'Token is required' });
@@ -26,11 +33,11 @@ export const bookSession = async (req, res) => {
 
   try {
     // Verify the token and decode the user ID
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const userId = decoded.userId; // Extract the user ID from the decoded token
 
     // Check if the time and date for the session are available
-    const isAvailable = await checkAvailability(expertId, sessionDate, sessionTime);
+    const isAvailable = await checkAvailability(expertId, date, time);
 
     if (!isAvailable) {
       return res.status(400).json({
@@ -38,23 +45,14 @@ export const bookSession = async (req, res) => {
       });
     }
 
-    // Initiate the payment process (you can integrate a real payment gateway here)
-    const paymentResult = await initiatePayment(userId, expertId, category, sessionDate, sessionTime, duration);
-
-    if (!paymentResult.success) {
-      return res.status(500).json({
-        message: 'Payment initiation failed. Please try again later.',
-      });
-    }
-
-    // Once payment is completed, mark the session as unconfirmed
+    // Create a new session with status 'pending' initially
     const newSession = new UserToExpertSession({
       userId,
       expertId,
       category,
-      sessionDate,
-      sessionTime,
-      status: 'pending', // Initially set status as 'pending' before payment
+      sessionDate: date, // Using 'date' as per your request
+      sessionTime: time, // Using 'time' as per your request
+      status: 'pending', // Initially set status as 'pending'
       duration,
       optionalNote,
     });
@@ -62,16 +60,7 @@ export const bookSession = async (req, res) => {
     // Save the session in the database
     await newSession.save();
 
-    // Complete the payment process
-    const paymentCompletionResult = await completePayment(paymentResult.paymentId);
-
-    if (!paymentCompletionResult.success) {
-      return res.status(500).json({
-        message: 'Payment completion failed. Please try again later.',
-      });
-    }
-
-    // Update the status of the session to unconfirmed after successful payment
+    // Update the session status to 'unconfirmed' (no payment confirmation yet)
     newSession.status = 'unconfirmed';
     await newSession.save();
 
@@ -79,7 +68,6 @@ export const bookSession = async (req, res) => {
       message: 'Session booked successfully. Status: unconfirmed.',
       session: newSession,
     });
-
   } catch (error) {
     console.error('Error booking session:', error);
     res.status(500).json({
@@ -87,4 +75,9 @@ export const bookSession = async (req, res) => {
       error: error.message,
     });
   }
-};
+});
+
+export { bookSession };
+
+
+
