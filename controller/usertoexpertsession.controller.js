@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import  {UserToExpertSession} from '../model/usertoexpertsession.model.js' // Import the session model
+=======
+import { UserToExpertSession } from '../model/usertoexpertsession.model.js'; // Import the session model
+>>>>>>> fa12fb33286654705c8f93135eeb0f646685b649
 import jwt from 'jsonwebtoken'; // For JWT token validation
 import dotenv from 'dotenv';
 import asyncHandler from '../utils/asyncHandler.js'; // Assuming you have an asyncHandler utility
