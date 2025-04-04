@@ -1,6 +1,6 @@
 import twilio from "twilio";
-import jwt from "jsonwebtoken";  // Added JWT
-import { User } from "../model/user.Model.js";
+import jwt from "jsonwebtoken";
+import { User } from "../model/user.model.js"; // Ensure correct model import
 import dotenv from "dotenv";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
@@ -8,22 +8,22 @@ import ApiResponse from "../utils/ApiResponse.js";
 
 dotenv.config();
 
-// Twilio client setup
+// ✅ Twilio client setup
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// Helper function: Normalize phone number
+// ✅ Helper function: Normalize phone number
 const normalizePhoneNumber = (phone) => phone.replace(/[^\d]/g, "");
 
-// Helper function: Send OTP via SMS
+// ✅ Helper function: Send OTP via SMS
 const sendOtp = async (phone) => {
   try {
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit OTP
     await client.messages.create({
-      body: `Your verification code is: ${otp}`,
+      body: `Your verification code is: ${otp}`, // ✅ Fixed string interpolation
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to ${phone}`);
+    console.log(`OTP sent to ${phone}`); // ✅ Fixed console log
     return otp;
   } catch (error) {
     console.error("Error sending OTP via Twilio:", error);
@@ -31,184 +31,92 @@ const sendOtp = async (phone) => {
   }
 };
 
-// 📌 Request OTP (Login Only)
+// ✅ Request OTP (Sends OTP and stores it in the database)
 const requestOtp = asyncHandler(async (req, res) => {
   const { phone } = req.body;
-
-  if (!phone) {
-    throw new ApiError(400, "Phone number is required");
-  }
+  if (!phone) throw new ApiError(400, "Phone number is required");
 
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // Check if user exists
-  let user = await User.findOne({ mobileNumber: normalizedPhone });
-
-  // Generate OTP
+  // Generate and send OTP
   const otp = await sendOtp(phone);
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 mins
+  if (!otp) throw new ApiError(500, "Failed to generate OTP");
 
-  // Store OTP in the User model
-  user = await User.findOneAndUpdate(
-    { mobileNumber: normalizedPhone },
-    { otp, otpExpires },
-    { upsert: true, new: true, runValidators: true }
-  );
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+
+  // ✅ Check if the user exists
+  let user = await User.findOne({ phone: normalizedPhone });
+
+  if (user) {
+    // Update existing user's OTP
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+  } else {
+    // Create a new user with OTP (registration will be completed later)
+    user = new User({ phone: normalizedPhone, otp, otpExpires, role: "user" });
+  }
+
+  await user.save(); // ✅ Save user in DB
 
   return res.status(200).json(
     new ApiResponse(200, { isNewUser: !user.fullname }, "OTP sent successfully")
   );
 });
 
-// 📌 Verify OTP (Login & Generate Token)
+// ✅ Verify OTP (Checks OTP and logs in/registers the user)
 const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp } = req.body;
-
-  if (!phone || !otp) {
-    throw new ApiError(400, "Phone and OTP are required");
-  }
+  if (!phone || !otp) throw new ApiError(400, "Phone and OTP are required");
 
   const normalizedPhone = normalizePhoneNumber(phone);
-  let user = await User.findOne({ mobileNumber: normalizedPhone });
+  let user = await User.findOne({ phone: normalizedPhone });
 
-  if (!user || user.otp !== otp || user.otpExpires < new Date()) {
+  if (!user || user.otp !== otp || new Date() > user.otpExpires) {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
-  // Remove OTP after successful verification
   user.otp = null;
   user.otpExpires = null;
   await user.save();
 
-  // ✅ Generate JWT Token
+  // Check if user has completed registration (has fullname)
+  if (!user.fullname) {
+    return res.status(200).json(
+      new ApiResponse(200, { isNewUser: true }, "OTP verified, proceed to registration")
+    );
+  }
+
   const token = jwt.sign(
-    { _id: user._id, mobileNumber: user.mobileNumber },
+    { _id: user._id, phone: user.phone, role: user.role },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "7d" } // Token expires in 7 days
+    { expiresIn: "7d" }
   );
 
   return res.status(200).json(
-    new ApiResponse(200, { isNewUser: !user.fullname, token }, "OTP verified successfully")
+    new ApiResponse(200, { isNewUser: false, token }, "OTP verified successfully")
   );
 });
 
-
-// 📌 Store User Information
-const storeUserInfo = asyncHandler(async (req, res) => {
-  const { firstname, lastname, email } = req.body;
-
-  if (!firstname || !lastname || !email) {
-    throw new ApiError(400, "Firstname, lastname, and email are required");
-  }
-
-  const user = await User.findById(req.user._id);
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  // Update user details
-  user.firstname = firstname;
-  user.lastname = lastname;
-  user.email = email;
-
-  await user.save();
-
-  return res.status(200).json(
-    new ApiResponse(200, user, "User information stored successfully")
-  );
-});
-
-
-
-
-
-// 📌 Get Current User (Protected Route)
-const getCurrentUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("fullname lastname email mobileNumber");
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  return res.status(200).json(new ApiResponse(200, user, "User fetched successfully"));
-});
-
-// 📌 Update User Profile (Protected Route)
-const updateUserProfile = asyncHandler(async (req, res) => {
-  const { fullname, lastname, email } = req.body;
-
-  if (!fullname || !lastname || !email) {
+// ✅ Register User (Creates a user after OTP verification)
+const registerUser = asyncHandler(async (req, res) => {
+  const { lastname, fullname, email, phone } = req.body; // Add phone here
+  if (!lastname || !fullname || !email || !phone) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { fullname, lastname, email },
-    { new: true, select: "fullname lastname email" }
+  const normalizedPhone = normalizePhoneNumber(phone);
+  let user = await User.findOne({ phone: normalizedPhone });
+
+  if (!user) throw new ApiError(400, "OTP verification required before registration");
+
+  user.fullname = fullname;
+  user.lastname = lastname;
+  user.email = email;
+  await user.save();
+
+  return res.status(201).json(
+    new ApiResponse(201, { message: "User registered successfully" })
   );
-
-  return res.status(200).json(new ApiResponse(200, user, "Profile updated successfully"));
 });
 
-
-const userdetail = asyncHandler(async (req, res) => {
-  const { firstname, lastname, email } = req.body;
-
-  // Validation
-  if (!firstname || !lastname || !email) {
-    res.status(400);
-    throw new Error("All fields are required: firstname, lastname, email");
-  }
-
-  // Email validation
-  if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-    res.status(400);
-    throw new Error("Please provide a valid email address");
-  }
-
-  try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    
-    if (existingUser) {
-      res.status(409); // Conflict status code
-      throw new Error("User with this email already exists");
-    }
-
-    // Create new user
-    const user = await User.create({
-      firstname,
-      lastname,
-      email
-    });
-
-    // Optionally omit sensitive data from response
-    const userResponse = {
-      _id: user._id,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      email: user.email,
-      createdAt: user.createdAt
-    };
-
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      data: userResponse
-    });
-    
-  } catch (error) {
-    // Handle duplicate key error (unique email)
-    if (error.code === 11000) {
-      res.status(409);
-      throw new Error("Email already in use");
-    }
-    // Handle other errors
-    res.status(error.statusCode || 500);
-    throw new Error(error.message || "Failed to create user");
-  }
-});
-
-
-export { requestOtp, verifyOtp, getCurrentUser, updateUserProfile ,userdetail};
+export { requestOtp, verifyOtp, registerUser };

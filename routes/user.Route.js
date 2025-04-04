@@ -1,16 +1,14 @@
-import express from 'express';
-import { requestOtp, verifyOtp, getCurrentUser, updateUserProfile,userdetail } from '../controller/user.controller.js';
+import {Router} from 'express';
+import { requestOtp, verifyOtp, registerUser } from '../controller/user.controller.js';
 import VerifyJwt from '../middleware/auth.middleware.js';
 
-const userrouter = express.Router();
+const router = Router();
 
 // Public Routes
-userrouter.post('/request-otp', requestOtp);
-userrouter.post('/verify-otp', verifyOtp);
+router.post('/request-otp', requestOtp);
+router.post('/verify-otp', verifyOtp);
+router.post('/register',registerUser)
 
-// 🔐 Protected Routes (Require JWT Token)
-userrouter.get('/getinfo', VerifyJwt, getCurrentUser);
-userrouter.put('/update', VerifyJwt, updateUserProfile);
-userrouter.post('/store', userdetail);
 
-export default userrouter;
+
+export default router;
