@@ -1,7 +1,7 @@
-import {UserToExpertSession} from "../model/usertoexpertsession.model.js"; // Import the model for user-to-expert sessions
-import jwt from "jsonwebtoken"; // For JWT token validation
-import dotenv from "dotenv";
-import asyncHandler from '../utils/asyncHandler.js'
+import  {UserToExpertSession} from '../model/usertoexpertsession.model.js' // Import the session model
+import jwt from 'jsonwebtoken'; // For JWT token validation
+import dotenv from 'dotenv';
+import asyncHandler from '../utils/asyncHandler.js'; // Assuming you have an asyncHandler utility
 
 dotenv.config();
 

@@ -42,9 +42,6 @@ const usertoexpertsessionSchema = new mongoose.Schema(
   { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );
 
-export const UserToExpertSession = mongoose.model(
-  'UserToExpertSession',
-  usertoexpertsessionSchema
-);
+export const UserToExpertSession = mongoose.model("UserToExpertSession", usertoexpertsessionSchema);
 
 

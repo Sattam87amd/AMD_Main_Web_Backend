@@ -1,6 +1,6 @@
 import twilio from "twilio";
-import jwt from "jsonwebtoken";
-import { User } from "../model/user.model.js"; // Ensure correct model import
+import jwt from "jsonwebtoken";  // Added JWT
+import { User } from "../model/user.model.js";
 import dotenv from "dotenv";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
