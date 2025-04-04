@@ -1,4 +1,4 @@
-import adminSchema from '../model/admin.Model';
+import { Admin } from '../model/admin.model';
 import bcrypt from 'bcryptjs';
 
 // Admin Login
