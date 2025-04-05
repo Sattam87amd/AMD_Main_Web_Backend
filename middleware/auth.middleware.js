@@ -1,7 +1,8 @@
 import asyncHandler from "./../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
-import { User } from "../model/user.model.js";
+import { User } from "../model/user.model.js";  // User model
+import { Expert } from "../model/expert.model.js";  // Expert model (you should have this model)
 
 const VerifyJwt = asyncHandler(async (req, res, next) => {
   try {
@@ -25,15 +26,34 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
     // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    // Fetch the user associated with the token
-    const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
+    let user = null;
+    let expert = null;
 
-    if (!user) {
-      throw new ApiError(401, "Invalid Access Token: User not found");
+    // Check if the token is for a user or an expert
+    if (decodedToken?.role === 'user') {
+      // Fetch the user associated with the token
+      user = await User.findById(decodedToken?._id).select("-password -refreshToken");
+
+      if (!user) {
+        throw new ApiError(401, "Invalid Access Token: User not found");
+      }
+
+      // Attach user data to the request for downstream use
+      req.user = user;
+    } else if (decodedToken?.role === 'expert') {
+      // Fetch the expert associated with the token
+      expert = await Expert.findById(decodedToken?._id);
+
+      if (!expert) {
+        throw new ApiError(401, "Invalid Access Token: Expert not found");
+      }
+
+      // Attach expert data to the request for downstream use
+      req.expert = expert;
+    } else {
+      throw new ApiError(401, "Invalid Access Token: Role not found");
     }
 
-    // Attach user data to the request for downstream use
-    req.user = user;
     next(); // Continue to the next middleware/route
   } catch (error) {
     // Handle specific errors
