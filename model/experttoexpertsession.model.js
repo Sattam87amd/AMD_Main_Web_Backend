@@ -1,17 +1,18 @@
 import mongoose, { Schema } from 'mongoose';
 
 const experttoexpertsessionSchema = new Schema({
-    expertId:{
-        type:Schema.Types.ObjectId,
+  consultingExpertID:{
+    type:mongoose.Schema.Types.ObjectId,
+    required:true,
+    ref:'Expert'
+  },
+  
+  expertId:{
+      type:mongoose.Schema.Types.ObjectId,
         required:true,
         ref:'Expert',
     },
-    expertId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Expert', // Referencing the _id of the Expert model
-        required: true,
-      },
-      category: {
+       category: {
         type: String,
         required: true, // Category for the appointment
       },
@@ -30,7 +31,7 @@ const experttoexpertsessionSchema = new Schema({
       },
       duration: {
         type: String,
-        enum: ['Quick-15min', 'Regular-30 min', 'Extra-45 min', 'All Access-60 min'],
+        enum: ['Quick-15 min', 'Regular-30 min', 'Extra-45 min', 'All Access-60 min'],
         required: true, // Duration of the appointment
       },
       optionalNote: {

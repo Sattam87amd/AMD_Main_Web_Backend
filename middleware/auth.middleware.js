@@ -1,11 +1,12 @@
 import asyncHandler from "./../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
-import { User } from "../model/user.model.js";
+import { User } from "../model/user.model.js";  // User model
+import { Expert } from "../model/expert.model.js";  // Expert model
 
 const VerifyJwt = asyncHandler(async (req, res, next) => {
   try {
-    // Try to extract the token from the Authorization header
+    // Extract the token from the Authorization header
     let token =
       req.header("Authorization")?.replace("Bearer ", "") || // From Authorization header
       req.body.token;  // Or from the request body
@@ -25,15 +26,38 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
     // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    // Fetch the user associated with the token
-    const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
+    console.log("Decoded Token:", decodedToken);  // Debugging to verify decoded token
 
-    if (!user) {
-      throw new ApiError(401, "Invalid Access Token: User not found");
+    let user = null;
+    let expert = null;
+
+    // Check if the token is for a user or an expert
+    if (decodedToken?.role === 'user') {
+      // Fetch the user associated with the token
+      user = await User.findById(decodedToken?._id).select("-password -refreshToken");
+
+      if (!user) {
+        throw new ApiError(401, "Invalid Access Token: User not found");
+      }
+
+      // Attach user data to the request for downstream use
+      req.user = user;
+    } else if (decodedToken?.role === 'expert') {
+      // Fetch the expert associated with the token using _id (not expertId)
+      expert = await Expert.findById(decodedToken?._id); // Use _id directly here
+
+      console.log("Expert:", expert); // Log the expert to verify if the query is correct
+
+      if (!expert) {
+        throw new ApiError(401, "Invalid Access Token: Expert not found");
+      }
+
+      // Attach expert data to the request for downstream use
+      req.expert = expert;
+    } else {
+      throw new ApiError(401, "Invalid Access Token: Role not found");
     }
 
-    // Attach user data to the request for downstream use
-    req.user = user;
     next(); // Continue to the next middleware/route
   } catch (error) {
     // Handle specific errors

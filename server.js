@@ -7,7 +7,9 @@ import expertrouter from './routes/expert.Routes.js';
 import userRouter from './routes/user.Route.js';
 import VerifyJwt from './middleware/auth.middleware.js';
 import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
+import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
 import adminRouter from "./routes/admin.routes.js"
+import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
 // Load environment variables
 dotenv.config();
 
@@ -45,7 +47,8 @@ app.use('/api/adminauth', adminRouter);
 
     
 
-app.use('/api/session', VerifyJwt, usertoexpertsessionRouter)
+app.use('/api/session', VerifyJwt, usertoexpertsessionRouter,experttoexpertsessionRouter)
+
 
 // Define the Port
 const PORT = process.env.PORT || 5000;
