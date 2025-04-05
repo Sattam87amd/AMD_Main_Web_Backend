@@ -128,4 +128,20 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 });
 
-export { requestOtp, verifyOtp, registerUser };
+// ✅ Get User Profile (Fetch user details by ID)
+const getUserProfile = asyncHandler(async (req, res) => {
+  const { id } = req.params; // Get user ID from URL parameters
+  let user = await User.findById(id); // Fetch user details from database
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Send user data as response
+  return res.status(200).json(
+    new ApiResponse(200, { user }, "User profile fetched successfully")
+  );
+});
+
+export { requestOtp, verifyOtp, registerUser, getUserProfile };  // Export the new function
+

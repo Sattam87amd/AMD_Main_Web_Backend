@@ -1,39 +1,9 @@
-// // import { Admin } from '../model/admin.model.js';
-// import bcrypt from 'bcryptjs';
-
-// // Admin Login
-// export const adminLogin = async (req, res) => {
-//     const { email, password } = req.body;
-
-//     if (!email || !password) {
-//         return res.status(400).json({ message: 'All fields are required' });
-//     }
-
-//     try {
-//         const admin = await AdminLogin.findOne({ email });
-//         if (!admin) {
-//             return res.status(400).json({ message: 'Invalid email or password' });
-//         }
-
-//         const isMatch = await bcrypt.compare(password, admin.password);
-//         if (!isMatch) {
-//             return res.status(400).json({ message: 'Invalid email or password' });
-//         }
-
-//         res.status(200).json({ message: 'Login successful' });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server Error', error });
-//     }
-// };
-
-
-
 import jwt from "jsonwebtoken";
-import { Admin } from "../model/admin.model.js";
+import { Admin } from "../model/admin.model.js";  // Corrected the import
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
-// import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";  // Make sure bcrypt is imported
 
 // 📌 Admin Login (Verify email and password)
 const adminLogin = asyncHandler(async (req, res) => {
@@ -70,7 +40,7 @@ const adminLogin = asyncHandler(async (req, res) => {
 
 // 📌 Get Admin Details (Protected Route)
 const getAdminDetails = asyncHandler(async (req, res) => {
-  const admin = await AdminLogin.findById(req.admin._id).select("email");
+  const admin = await Admin.findById(req.admin._id).select("email");
 
   if (!admin) {
     throw new ApiError(404, "Admin not found");
