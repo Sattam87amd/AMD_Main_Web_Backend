@@ -33,7 +33,7 @@ import { Admin } from "../model/admin.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import bcrypt from "bcrypt";
+// import bcrypt from "bcrypt";
 
 // 📌 Admin Login (Verify email and password)
 const adminLogin = asyncHandler(async (req, res) => {

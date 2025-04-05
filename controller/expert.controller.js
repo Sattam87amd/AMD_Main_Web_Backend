@@ -107,22 +107,37 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
 // Registration Controller
 export const registerExpert = asyncHandler(async (req, res) => {
-  const { phone, email, firstName, lastName, gender } = req.body;
-  if (!phone || !email || !firstName || !lastName || !gender) {
-    throw new ApiError(400, "All fields required");
+  const { email, firstName, lastName, gender, phone } = req.body; // phone is still received but optional in frontend
+
+  // Validate required fields (excluding phone)
+  if (!firstName || !lastName || !email || !gender) {
+    throw new ApiError(400, "All fields are required");
   }
 
+  // Normalize and find expert by phone (which should be from OTP step)
   const normalizedPhone = normalizePhoneNumber(phone);
   const expert = await Expert.findOne({ phone: normalizedPhone });
-  if (!expert) throw new ApiError(400, "OTP verification required first");
 
-  expert.email = email;
+  if (!expert) {
+    throw new ApiError(400, "OTP verification required before registration");
+  }
+
+  // Optional: Prevent re-registration
+  if (expert.email || expert.firstName || expert.lastName) {
+    throw new ApiError(400, "Expert already registered.");
+  }
+
+  // Fill in registration details
   expert.firstName = firstName;
   expert.lastName = lastName;
+  expert.email = email;
   expert.gender = gender;
+
   await expert.save();
 
-  res.status(201).json(new ApiResponse(201, expert, "Expert registered"));
+  return res.status(201).json(
+    new ApiResponse(201, { message: "Expert registered successfully" })
+  );
 });
 
 // Expert Profile Controllers

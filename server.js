@@ -39,6 +39,7 @@ app.get('/', (req, res) => {
 // app.use('/api/admin', adminrouter)
 
 app.use('/api/userauth', userRouter);
+app.use('/api/expertauth', expertrouter);
 app.use('/api/adminauth', adminRouter);
 
     
