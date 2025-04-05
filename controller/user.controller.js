@@ -75,6 +75,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
+  // Reset OTP after successful verification
   user.otp = null;
   user.otpExpires = null;
   await user.save();
@@ -86,6 +87,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     );
   }
 
+  // Generate JWT token after OTP verification
   const token = jwt.sign(
     { _id: user._id, phone: user.phone, role: user.role },
     process.env.ACCESS_TOKEN_SECRET,
@@ -99,7 +101,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
-  const { lastname, fullname, email, phone } = req.body; // Add phone here
+  const { lastname, fullname, email, phone } = req.body;
   if (!lastname || !fullname || !email || !phone) {
     throw new ApiError(400, "All fields are required");
   }
@@ -114,8 +116,15 @@ const registerUser = asyncHandler(async (req, res) => {
   user.email = email;
   await user.save();
 
+  // Generate JWT token after successful registration
+  const token = jwt.sign(
+    { _id: user._id, phone: user.phone, role: user.role },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
+
   return res.status(201).json(
-    new ApiResponse(201, { message: "User registered successfully" })
+    new ApiResponse(201, { message: "User registered successfully", token })
   );
 });
 

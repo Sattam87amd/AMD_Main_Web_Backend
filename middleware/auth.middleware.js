@@ -5,29 +5,48 @@ import { User } from "../model/user.model.js";
 
 const VerifyJwt = asyncHandler(async (req, res, next) => {
   try {
-    const token =
-      req.cookies?.accessToken ||
-      req.header("Authorization")?.replace("Bearer ", "");
+    // Try to extract the token from the Authorization header
+    let token =
+      req.header("Authorization")?.replace("Bearer ", "") || // From Authorization header
+      req.body.token;  // Or from the request body
 
-    console.log("Token:", token);
+    console.log("Extracted Token:", token); // Debug log to verify the token format
 
+    // If no token is found, throw an error
     if (!token || token.trim() === "") {
-      throw new ApiError(401, "Unauthorized Request");
+      throw new ApiError(401, "Unauthorized Request: No token provided");
     }
 
+    // Check if the token format is valid (JWT should have 3 parts separated by '.')
+    if (!/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(token)) {
+      throw new ApiError(401, "Invalid token format: Token is malformed");
+    }
+
+    // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    const user = await User.findById(decodedToken?._id).select(
-      "-password -refreshToken"
-    );
+    // Fetch the user associated with the token
+    const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
 
     if (!user) {
-      throw new ApiError(401, "Invalid Access Token");
+      throw new ApiError(401, "Invalid Access Token: User not found");
     }
+
+    // Attach user data to the request for downstream use
     req.user = user;
-    next();
+    next(); // Continue to the next middleware/route
   } catch (error) {
-    throw new ApiError(402, error.message || "invalid access token");
+    // Handle specific errors
+    if (error.name === 'TokenExpiredError') {
+      throw new ApiError(401, "Token has expired");
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      throw new ApiError(401, "Invalid token format");
+    }
+
+    // For other errors, return a generic message
+    throw new ApiError(402, error.message || "Invalid Access Token");
   }
 });
 
