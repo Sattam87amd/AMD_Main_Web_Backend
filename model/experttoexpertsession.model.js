@@ -2,15 +2,11 @@ import mongoose, { Schema } from 'mongoose';
 
 const experttoexpertsessionSchema = new Schema({
     expertId:{
-        type:Schema.Types.ObjectId,
-        required:true,
+        type:mongoose.Schema.Types.ObjectId,
+        required:false,
         ref:'Expert',
     },
-    expertId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Expert', // Referencing the _id of the Expert model
-        required: true,
-      },
+   
       category: {
         type: String,
         required: true, // Category for the appointment
