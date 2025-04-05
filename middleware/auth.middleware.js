@@ -2,11 +2,11 @@ import asyncHandler from "./../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
 import { User } from "../model/user.model.js";  // User model
-import { Expert } from "../model/expert.model.js";  // Expert model (you should have this model)
+import { Expert } from "../model/expert.model.js";  // Expert model
 
 const VerifyJwt = asyncHandler(async (req, res, next) => {
   try {
-    // Try to extract the token from the Authorization header
+    // Extract the token from the Authorization header
     let token =
       req.header("Authorization")?.replace("Bearer ", "") || // From Authorization header
       req.body.token;  // Or from the request body
@@ -26,6 +26,8 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
     // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
+    console.log("Decoded Token:", decodedToken);  // Debugging to verify decoded token
+
     let user = null;
     let expert = null;
 
@@ -41,8 +43,10 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
       // Attach user data to the request for downstream use
       req.user = user;
     } else if (decodedToken?.role === 'expert') {
-      // Fetch the expert associated with the token
-      expert = await Expert.findById(decodedToken?._id);
+      // Fetch the expert associated with the token using _id (not expertId)
+      expert = await Expert.findById(decodedToken?._id); // Use _id directly here
+
+      console.log("Expert:", expert); // Log the expert to verify if the query is correct
 
       if (!expert) {
         throw new ApiError(401, "Invalid Access Token: Expert not found");

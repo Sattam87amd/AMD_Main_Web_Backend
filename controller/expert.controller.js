@@ -88,22 +88,26 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   expert.otpExpires = undefined;
   await expert.save();
 
-  if (!expert.email) {
+  // Check if the phone number already exists and if the expert has already completed registration
+  if (expert.firstName && expert.lastName && expert.email) {
+    // If expert has completed registration, return the token for login
+    const token = jwt.sign(
+      { _id: expert._id, phone: expert.phone, role: "expert" },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
     return res.status(200).json(new ApiResponse(200, 
-      { isNewExpert: true }, 
-      "OTP verified - complete registration"));
+      { isNewExpert: false, token }, 
+      "OTP verified - login successful"));
   }
 
-  const token = jwt.sign(
-    { _id: expert._id, phone: expert.phone, role: "expert" },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  res.status(200).json(new ApiResponse(200, 
-    { isNewExpert: false, token }, 
-    "OTP verified - login successful"));
+  // If the expert does not have a full name and email, they need to complete the registration
+  return res.status(200).json(new ApiResponse(200, 
+    { isNewExpert: true }, 
+    "OTP verified - complete registration"));
 });
+
 
 // Registration Controller
 export const registerExpert = asyncHandler(async (req, res) => {
