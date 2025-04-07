@@ -34,6 +34,12 @@ const expertSchema = new mongoose.Schema(
       type: String,
       enum: ["expert"],
       default: "expert"
+    },
+    status:{
+     type:String,
+     enum:["Approved"],
+     default:"Approved"
+
     }
   },
   { timestamps: true, collection: 'expert' }
