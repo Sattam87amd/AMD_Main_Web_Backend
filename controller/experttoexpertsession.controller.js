@@ -34,7 +34,7 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
   try {
     // Verify the token and decode the expert's ID (the expert who is booking the session)
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    const expertId = decoded.expertId; // The expert initiating the session
+    const expertId = decoded._id; // Decoding the expert's _id from the token
 
     // Ensure an expert cannot book a session with themselves
     if (expertId === consultingExpertId) {

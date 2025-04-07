@@ -166,13 +166,25 @@ export const createExpert = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, expert, "Profile completed"));
 });
 
-export const getExperts = asyncHandler(async (req, res) => {
-  const experts = await Expert.find();
-  res.status(200).json(new ApiResponse(200, experts, "Experts retrieved"));
-});
 
-export const getExpertById = asyncHandler(async (req, res) => {
-  const expert = await Expert.findById(req.params.id);
-  if (!expert) throw new ApiError(404, "Expert not found");
-  res.status(200).json(new ApiResponse(200, expert, "Expert retrieved"));
-});
+export const getExpertById = async (req, res) => {
+  const { id } = req.params;  // Get expertId from URL parameters
+
+  try {
+    // Fetch the expert data from the database
+    const expert = await Expert.findById(id);
+
+    // If expert is not found, return a 404 error
+    if (!expert) {
+      return res.status(404).json({ message: 'Expert not found' });
+    }
+
+    // If expert is found, return the expert details
+    res.status(200).json(expert);
+  } catch (error) {
+    console.error('Error fetching expert:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+

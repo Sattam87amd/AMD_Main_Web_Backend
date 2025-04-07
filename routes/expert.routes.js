@@ -3,12 +3,11 @@ import upload from "../middleware/multer.middleware.js";
 import VerifyJwt from "../middleware/auth.middleware.js";
 import {
   createExpert,
-  getExperts,
-  getExpertById,
   requestOtp,
   verifyOtp,
-  registerExpert
-} from "../controller/expert.Controller.js";
+  registerExpert,
+  getExpertById
+} from "../controller/expert.controller.js";
 
 const expertrouter = express.Router();
 
