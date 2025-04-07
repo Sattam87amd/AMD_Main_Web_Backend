@@ -30,7 +30,7 @@ const sendOtp = async (phone) => {
   }
 };
 
-export const requestOtp = asyncHandler(async (req, res) => {
+const requestOtp = asyncHandler(async (req, res) => {
   const { phone } = req.body;
   if (!phone) throw new ApiError(400, "Phone number required");
 
@@ -74,7 +74,7 @@ export const requestOtp = asyncHandler(async (req, res) => {
   );
 });
 
-export const verifyOtp = asyncHandler(async (req, res) => {
+const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp } = req.body;
   if (!phone || !otp) throw new ApiError(400, "Phone and OTP required");
 
@@ -111,7 +111,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
 
 // Registration Controller
-export const registerExpert = asyncHandler(async (req, res) => {
+const registerExpert = asyncHandler(async (req, res) => {
   const { email, firstName, lastName, gender, phone } = req.body; // phone is still received but optional in frontend
 
   // Validate required fields (excluding phone)
@@ -146,7 +146,7 @@ export const registerExpert = asyncHandler(async (req, res) => {
 });
 
 // Expert Profile Controllers
-export const createExpert = asyncHandler(async (req, res) => {
+const createExpert = asyncHandler(async (req, res) => {
   const { socialLink, areaOfExpertise, experience } = req.body;
   const files = req.files;
   
@@ -167,13 +167,47 @@ export const createExpert = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, expert, "Profile completed"));
 });
 
-export const getExperts = asyncHandler(async (req, res) => {
+const logoutExpert = asyncHandler(async (req, res) => {
+  await Expert.findByIdAndUpdate(
+    req.expert._id,
+    {
+      $unset: {
+        token: 1,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("token", options)
+    .json(new ApiResponse(200, {}, "User logged out"));
+});
+
+const getExperts = asyncHandler(async (req, res) => {
   const experts = await Expert.find();
   res.status(200).json(new ApiResponse(200, experts, "Experts retrieved"));
 });
 
-export const getExpertById = asyncHandler(async (req, res) => {
+const getExpertById = asyncHandler(async (req, res) => {
   const expert = await Expert.findById(req.params.id);
   if (!expert) throw new ApiError(404, "Expert not found");
   res.status(200).json(new ApiResponse(200, expert, "Expert retrieved"));
 });
+
+export {
+requestOtp,
+verifyOtp,
+registerExpert,
+createExpert,
+getExperts,
+getExpertById,
+logoutExpert
+};
