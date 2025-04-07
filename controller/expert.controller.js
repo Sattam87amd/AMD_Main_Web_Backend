@@ -7,7 +7,7 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import upload from "../middleware/multer.middleware.js";
 import { User } from "../model/user.model.js"; 
-
+import mongoose from "mongoose";
 
 dotenv.config();
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -110,62 +110,81 @@ const verifyOtp = asyncHandler(async (req, res) => {
 });
 
 
-// Registration Controller
+// Merged registerExpert Controller
 const registerExpert = asyncHandler(async (req, res) => {
-  const { email, firstName, lastName, gender, phone } = req.body; // phone is still received but optional in frontend
+  const { email, firstName, lastName, gender, phone, socialLink, areaOfExpertise, experience, category } = req.body;
+  const files = req.files;
 
   // Validate required fields (excluding phone)
   if (!firstName || !lastName || !email || !gender) {
-    throw new ApiError(400, "All fields are required");
+    throw new ApiError(400, 'All fields are required');
   }
 
-  // Normalize and find expert by phone (which should be from OTP step)
-  const normalizedPhone = normalizePhoneNumber(phone);
-  const expert = await Expert.findOne({ phone: normalizedPhone });
+  // Validate profile fields (optional, but must be filled in case of profile completion)
+  if (!socialLink || !areaOfExpertise || !experience) {
+    throw new ApiError(400, 'Social link, area of expertise, and experience are required');
+  }
 
+  // Normalize phone number and find expert by phone
+  const normalizedPhone = phone.replace(/[^\d]/g, "");
+  let expert = await Expert.findOne({ phone: normalizedPhone });
+
+  // If expert exists but isn't fully registered (no email, firstName, or lastName)
+  if (expert && !expert.email) {
+    expert.firstName = firstName;
+    expert.lastName = lastName;
+    expert.email = email;
+    expert.gender = gender;
+
+    expert.socialLink = socialLink;
+    expert.areaOfExpertise = areaOfExpertise;
+    expert.experience = experience;
+    expert.category = category;  // Save category field
+
+    // Save the certification and photo files if available
+    if (files?.certification?.[0]) {
+      expert.certificationFile = files.certification[0].path;
+    }
+    if (files?.photo?.[0]) {
+      expert.photoFile = files.photo[0].path;
+    }
+
+    await expert.save();
+
+    return res.status(201).json(new ApiResponse(201, expert, 'Expert registered and profile completed successfully.'));
+  }
+
+  // If expert does not exist, create a new record
   if (!expert) {
-    throw new ApiError(400, "OTP verification required before registration");
+    expert = new Expert({
+      phone: normalizedPhone,
+      firstName,
+      lastName,
+      email,
+      gender,
+      socialLink,
+      areaOfExpertise,
+      experience,
+      category,  // Save category field
+      role: 'expert',
+    });
+
+    // Save the certification and photo files if available
+    // if (files?.certification?.[0]) {
+    //   expert.certificationFile = files.certification[0].path;
+    // }
+    // if (files?.photo?.[0]) {
+    //   expert.photoFile = files.photo[0].path;
+    // }
+
+    await expert.save();
+    return res.status(201).json(new ApiResponse(201, expert, 'Expert registered successfully'));
   }
 
-  // Optional: Prevent re-registration
-  if (expert.email || expert.firstName || expert.lastName) {
-    throw new ApiError(400, "Expert already registered.");
-  }
-
-  // Fill in registration details
-  expert.firstName = firstName;
-  expert.lastName = lastName;
-  expert.email = email;
-  expert.gender = gender;
-
-  await expert.save();
-
-  return res.status(201).json(
-    new ApiResponse(201, { message: "Expert registered successfully" })
-  );
+  // If expert already has email or full registration data
+  throw new ApiError(400, 'Expert already registered');
 });
 
-// Expert Profile Controllers
-const createExpert = asyncHandler(async (req, res) => {
-  const { socialLink, areaOfExpertise, experience } = req.body;
-  const files = req.files;
-  
-  if (!files?.certification?.[0] || !files?.photo?.[0]) {
-    throw new ApiError(400, "Certification and photo required");
-  }
-
-  const expert = await Expert.findById(req.expert._id);
-  if (!expert) throw new ApiError(404, "Expert not found");
-
-  expert.socialLink = socialLink;
-  expert.areaOfExpertise = areaOfExpertise;
-  expert.experience = experience;
-  expert.certificationFile = files.certification[0].path;
-  expert.photoFile = files.photo[0].path;
-  await expert.save();
-
-  res.status(201).json(new ApiResponse(201, expert, "Profile completed"));
-});
 
 const logoutExpert = asyncHandler(async (req, res) => {
   await Expert.findByIdAndUpdate(
@@ -197,7 +216,12 @@ const getExperts = asyncHandler(async (req, res) => {
 });
 
 const getExpertById = asyncHandler(async (req, res) => {
-  const expert = await Expert.findById(req.params.id);
+  const expertId = req.params.id;
+
+  // Convert expertId to ObjectId before querying the database
+  const objectId = new mongoose.Types.ObjectId(expertId);
+
+  const expert = await Expert.findById(objectId);
   if (!expert) throw new ApiError(404, "Expert not found");
   res.status(200).json(new ApiResponse(200, expert, "Expert retrieved"));
 });
@@ -206,7 +230,6 @@ export {
 requestOtp,
 verifyOtp,
 registerExpert,
-createExpert,
 getExperts,
 getExpertById,
 logoutExpert

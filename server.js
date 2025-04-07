@@ -3,12 +3,12 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import connectDB from './db/db_config.js'; // Database configuration import
-import expertrouter from './routes/expert.Routes.js';
+import expertrouter from './routes/expert.routes.js';
 import userRouter from './routes/user.Route.js';
 import VerifyJwt from './middleware/auth.middleware.js';
 import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
 import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
-import adminRouter from "./routes/admin.routes.js"
+// import adminRouter from "./routes/admin.routes.js"
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
 // Load environment variables
 dotenv.config();
@@ -42,8 +42,8 @@ app.get('/', (req, res) => {
 
 app.use('/api/userauth', userRouter);
 app.use('/api/expertauth', expertrouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/adminauth', adminRouter);
+// app.use('/api/admin', adminRouter);
+// app.use('/api/adminauth', adminRouter);
 
     
 

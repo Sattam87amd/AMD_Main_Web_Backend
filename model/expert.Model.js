@@ -40,7 +40,8 @@ const expertSchema = new mongoose.Schema(
      enum:["Approved"],
      default:"Approved"
 
-    }
+    },
+
   },
   { timestamps: true, collection: 'expert' }
 );
