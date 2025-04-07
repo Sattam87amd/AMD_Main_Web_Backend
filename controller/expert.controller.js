@@ -62,7 +62,8 @@ export const requestOtp = asyncHandler(async (req, res) => {
       phone: normalizedPhone,
       otp,
       otpExpires,
-      role: "expert"
+      role: "expert",
+      status:"Approve"
     });
   }
 
@@ -92,7 +93,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   if (expert.firstName && expert.lastName && expert.email) {
     // If expert has completed registration, return the token for login
     const token = jwt.sign(
-      { _id: expert._id, phone: expert.phone, role: "expert" },
+      { _id: expert._id, phone: expert.phone, role: "expert" ,status:"Approve"},
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
