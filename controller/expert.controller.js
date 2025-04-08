@@ -226,11 +226,25 @@ const getExpertById = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, expert, "Expert retrieved"));
 });
 
+// Fetch experts by area of expertise
+const getExpertsByArea = asyncHandler(async (req, res) => {
+  const { area } = req.params;
+
+  const experts = await Expert.find({ areaOfExpertise: area });
+
+  if (experts.length === 0) {
+    return res.status(404).json(new ApiResponse(404, [], "No experts found for this area"));
+  }
+
+  res.status(200).json(new ApiResponse(200, experts, "Experts fetched successfully"));
+});
+
 export {
 requestOtp,
 verifyOtp,
 registerExpert,
 getExperts,
 getExpertById,
-logoutExpert
+logoutExpert,
+getExpertsByArea
 };

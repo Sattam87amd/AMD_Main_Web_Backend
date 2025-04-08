@@ -5,7 +5,8 @@ import {
   requestOtp,
   verifyOtp,
   registerExpert,
-  getExpertById
+  getExpertById,
+  getExpertsByArea
 } from "../controller/expert.controller.js";
 
 const expertrouter = express.Router();
@@ -26,5 +27,6 @@ expertrouter.post("/register", registerExpert);
 // );
 
 expertrouter.get("/:id", getExpertById);
+expertrouter.get("/area/:area", getExpertsByArea)
 
 export default expertrouter;

@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -38,34 +39,41 @@ const requestOtp = asyncHandler(async (req, res) => {
 
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // Generate and send OTP
-  const otp = await sendOtp(phone);
-  if (!otp) throw new ApiError(500, "Failed to generate OTP");
-
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
-
   // ✅ Check if the user exists
   let user = await User.findOne({ phone: normalizedPhone });
 
   if (user) {
-    // Update existing user's OTP
+    // User exists, send OTP for verification
+    const otp = await sendOtp(phone);
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+
+    // Update the user's OTP and expiration
     user.otp = otp;
     user.otpExpires = otpExpires;
+    await user.save(); // Save OTP details in the DB
+
+    return res.status(200).json(
+      new ApiResponse(200, { isNewUser: false }, "OTP sent successfully")
+    );
   } else {
+    // User doesn't exist, proceed with registration, but also send OTP
+    const otp = await sendOtp(phone);
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+
     // Create a new user with OTP (registration will be completed later)
     user = new User({ phone: normalizedPhone, otp, otpExpires, role: "user" });
+    await user.save(); // Save new user with OTP
+
+    return res.status(200).json(
+      new ApiResponse(200, { isNewUser: true }, "User not found, please proceed with registration")
+    );
   }
-
-  await user.save(); // ✅ Save user in DB
-
-  return res.status(200).json(
-    new ApiResponse(200, { isNewUser: !user.fullname }, "OTP sent successfully")
-  );
 });
+
 
 // ✅ Verify OTP (Checks OTP and logs in/registers the user)
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp } = req.body;
+  const { phone, otp, firstName, lastName, email } = req.body; // Only firstName, lastName, and email for registration
   if (!phone || !otp) throw new ApiError(400, "Phone and OTP are required");
 
   const normalizedPhone = normalizePhoneNumber(phone);
@@ -80,29 +88,45 @@ const verifyOtp = asyncHandler(async (req, res) => {
   user.otpExpires = null;
   await user.save();
 
-  // Check if user has completed registration (has fullname)
-  if (!user.fullname) {
+  // If the user doesn't exist or has incomplete information, proceed with registration
+  if (!user.firstName) {
+    // Only update firstName, lastName, and email
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.email = email;
+
+    await user.save(); // Save the registration details
+
+    // Generate a JWT token for the newly registered user
+    const token = jwt.sign(
+      { _id: user._id, phone: user.phone, role: "user" },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
     return res.status(200).json(
-      new ApiResponse(200, { isNewUser: true }, "OTP verified, proceed to registration")
+      new ApiResponse(200, { isNewUser: true, token }, "OTP verified, registration completed")
     );
   }
 
-  // Generate JWT token after OTP verification
+  // If the user is existing and has a complete registration, generate the token
   const token = jwt.sign(
-    { _id: user._id, phone: user.phone, role: user.role },
+    { _id: user._id, phone: user.phone, role: "user" },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "7d" }
   );
 
   return res.status(200).json(
-    new ApiResponse(200, { isNewUser: false, token }, "OTP verified successfully")
+    new ApiResponse(200, { isNewUser: false, token }, "OTP verified, login successful")
   );
 });
 
+
+
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
-  const { lastname, fullname, email, phone } = req.body;
-  if (!lastname || !fullname || !email || !phone) {
+  const { firstName, lastName, email, phone} = req.body;
+  if (!firstName || !lastName || !email || !phone) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -111,22 +135,18 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (!user) throw new ApiError(400, "OTP verification required before registration");
 
-  user.fullname = fullname;
-  user.lastname = lastname;
+  user.firstName = firstName;
+  user.lastName = lastName;
   user.email = email;
   await user.save();
 
-  // Generate JWT token after successful registration
-  const token = jwt.sign(
-    { _id: user._id, phone: user.phone, role: user.role },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "7d" }
-  );
+ 
 
   return res.status(201).json(
-    new ApiResponse(201, { message: "User registered successfully", token })
+    new ApiResponse(201, { message: "User registered successfully" })
   );
 });
+
 
 // ✅ Get User Profile (Fetch user details by ID)
 const getUserProfile = asyncHandler(async (req, res) => {
@@ -143,5 +163,26 @@ const getUserProfile = asyncHandler(async (req, res) => {
   );
 });
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile };  // Export the new function
+const getUserById = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  // Log the userId to check its value
+  console.log("Received userId:", userId);
+  
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user ID format");
+  }
+  
+
+  // Convert userId to ObjectId after validation
+  const objectId = new mongoose.Types.ObjectId(userId);
+
+  const user = await User.findById(objectId);
+  if (!user) throw new ApiError(404, "User not found");
+
+  res.status(200).json(new ApiResponse(200, user, "User retrieved"));
+});
+
+
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById };  // Export the new function
 
