@@ -12,9 +12,9 @@ const experttoexpertsessionSchema = new Schema({
         required:true,
         ref:'Expert',
     },
-       category: {
+       areaOfExpertise: {
         type: String,
-        enum: ['Career Guidance', 'Digital Marketing', 'Technology', 'Style and Beauty', 'HEalth and Wellness'],
+        enum: ['Home', 'Digital Marketing', 'Technology', 'Style and Beauty', 'HEalth and Wellness'],
         required: true, // Category for the appointment
       },
       sessionDate: {

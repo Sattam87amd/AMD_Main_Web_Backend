@@ -21,7 +21,7 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
 
 // Expert-to-Expert session booking controller
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
-  const { consultingExpertId, category, date, time, duration, optionalNote } = req.body;
+  const { consultingExpertId, areaOfExpertise, date, time, duration, optionalNote } = req.body;
 
   // Get the token from the Authorization header
   const token = req.header("Authorization")?.replace("Bearer ", "");
@@ -56,7 +56,7 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
     const newSession = new ExpertToExpertSession({
       expertId, // The expert initiating the consultation
       consultingExpertID: consultingExpertId, // The expert being consulted
-      category,
+      areaOfExpertise,
       sessionDate: date, // Session date in YYYY-MM-DD format
       sessionTime: time, // Session time in HH:mm format
       status: 'pending', // Initially set status as 'pending'
