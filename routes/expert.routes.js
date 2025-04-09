@@ -1,5 +1,6 @@
 import express from "express";
-import upload from "../middleware/multer.middleware.js";
+import multer from 'multer';
+//import upload from "../middleware/multer.middleware.js";
 import VerifyJwt from "../middleware/auth.middleware.js";
 import {
   requestOtp,
@@ -14,17 +15,20 @@ const expertrouter = express.Router();
 // Public Routes
 expertrouter.post("/request-otp", requestOtp);
 expertrouter.post("/verify-otp", verifyOtp);
-expertrouter.post("/register", registerExpert);
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Use upload.fields to handle multiple file fields
+expertrouter.post(
+  '/register',
+  upload.fields([
+    { name: 'photoFile', maxCount: 1 },
+    { name: 'certificationFile', maxCount: 1 }
+  ]),
+  registerExpert
+);
 // Protected Routes
-
-// expertrouter.post("/create", 
-//   upload.fields([
-//     { name: "certification", maxCount: 1 },
-//     { name: "photo", maxCount: 1 }
-//   ]), 
-//   createExpert
-// );
 
 expertrouter.get("/:id", getExpertById);
 expertrouter.get("/area/:area", getExpertsByArea)

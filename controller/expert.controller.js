@@ -1,4 +1,4 @@
-import { Expert } from "../model/expert.model.js";
+import { Expert } from '../model/expert.model.js';
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import jwt from "jsonwebtoken";
@@ -8,6 +8,8 @@ import ApiResponse from "../utils/ApiResponse.js";
 import upload from "../middleware/multer.middleware.js";
 import { User } from "../model/user.model.js"; 
 import mongoose from "mongoose";
+import cloudinary from 'cloudinary';
+import streamifier from 'streamifier';
 
 dotenv.config();
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -111,11 +113,152 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
 
 // Merged registerExpert Controller
-const registerExpert = asyncHandler(async (req, res) => {
-  const { email, firstName, lastName, gender, phone, socialLink, areaOfExpertise, experience, category } = req.body;
-  const files = req.files;
+// const registerExpert = asyncHandler(async (req, res) => {
+//   const { email, firstName, lastName, gender, phone, socialLink, areaOfExpertise, experience, category } = req.body;
+//   const files = req.files;
 
-  // Validate required fields (excluding phone)
+//   // Validate required fields (excluding phone)
+//   if (!firstName || !lastName || !email || !gender) {
+//     throw new ApiError(400, 'All fields are required');
+//   }
+
+//   // Validate profile fields (optional, but must be filled in case of profile completion)
+//   if (!socialLink || !areaOfExpertise || !experience) {
+//     throw new ApiError(400, 'Social link, area of expertise, and experience are required');
+//   }
+
+//   // Normalize phone number and find expert by phone
+//   const normalizedPhone = phone.replace(/[^\d]/g, "");
+//   let expert = await Expert.findOne({ phone: normalizedPhone });
+
+//   // If expert exists but isn't fully registered (no email, firstName, or lastName)
+//   if (expert && !expert.email) {
+//     expert.firstName = firstName;
+//     expert.lastName = lastName;
+//     expert.email = email;
+//     expert.gender = gender;
+
+//     expert.socialLink = socialLink;
+//     expert.areaOfExpertise = areaOfExpertise;
+//     expert.experience = experience;
+//     expert.category = category;  // Save category field
+
+//     // Save the certification and photo files if available
+//     if (files?.certification?.[0]) {
+//       expert.certificationFile = files.certification[0].path;
+//     }
+//     if (files?.photo?.[0]) {
+//       expert.photoFile = files.photo[0].path;
+//     }
+
+//     await expert.save();
+
+//     return res.status(201).json(new ApiResponse(201, expert, 'Expert registered and profile completed successfully.'));
+//   }
+
+//   // If expert does not exist, create a new record
+//   if (!expert) {
+//     expert = new Expert({
+//       phone: normalizedPhone,
+//       firstName,
+//       lastName,
+//       email,
+//       gender,
+//       socialLink,
+//       areaOfExpertise,
+//       experience,
+//       category,  // Save category field
+//       role: 'expert',
+//     });
+
+//     // Save the certification and photo files if available
+//     // if (files?.certification?.[0]) {
+//     //   expert.certificationFile = files.certification[0].path;
+//     // }
+//     // if (files?.photo?.[0]) {
+//     //   expert.photoFile = files.photo[0].path;
+//     // }
+
+//     await expert.save();
+//     return res.status(201).json(new ApiResponse(201, expert, 'Expert registered successfully'));
+//   }
+
+//   // If expert already has email or full registration data
+//   throw new ApiError(400, 'Expert already registered');
+// });
+
+
+// Configure Cloudinary using your credentials (ideally use environment variables)
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, //|| 'dctmzawgj',
+  api_key: process.env.CLOUDINARY_API_KEY,// || '517938482585331',
+  api_secret: process.env.CLOUDINARY_API_SECRET,// || 'i6XCN0_E4JGeoTSJQU5uK0c9odw'
+});
+
+// Helper function to upload a file buffer to Cloudinary
+const uploadToCloudinary = (fileBuffer, folder, resource_type = 'image') => {
+  return new Promise((resolve, reject) => {
+    // Check the file type (MIME type)
+    if (resource_type === 'image') {
+      const mimeType = fileBuffer.mimetype;
+      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(mimeType)) {
+        return reject(new Error("Invalid image file"));
+      }
+    }
+
+    const uploadStream = cloudinary.v2.uploader.upload_stream(
+      { folder, resource_type: 'auto',
+        transformation: [
+          { width: 800, height: 800, crop: 'limit' } ]
+       },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    streamifier.createReadStream(fileBuffer.buffer).pipe(uploadStream);
+  });
+};
+
+
+// Controller to handle expert registration with file uploads
+const registerExpert = async (req, res) => {
+  try {
+    // Log the received files
+    console.log('Received files:', req.files);
+
+    // Extract data from the request body
+    const {
+      email,
+      firstName,
+      lastName,
+      gender,
+      phone,
+      socialLink,
+      areaOfExpertise,
+      specificArea,
+      experience
+    } = req.body;
+
+    // Handle the file upload process
+    let photoUrl = null;
+    let certificationUrl = null;
+
+    // If photo file is provided
+    if (req.files && req.files.photoFile && req.files.photoFile[0]) {
+      const photoFile = req.files.photoFile[0];
+      const photoResult = await uploadToCloudinary(photoFile, 'experts/photos');
+      photoUrl = photoResult.secure_url;
+    }
+
+    // If certification file is provided
+    if (req.files && req.files.certificationFile && req.files.certificationFile[0]) {
+      const certFile = req.files.certificationFile[0];
+      const certResult = await uploadToCloudinary(certFile, 'experts/certifications', 'raw');
+      certificationUrl = certResult.secure_url;
+    }
+
+      // Validate required fields (excluding phone)
   if (!firstName || !lastName || !email || !gender) {
     throw new ApiError(400, 'All fields are required');
   }
@@ -125,11 +268,11 @@ const registerExpert = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Social link, area of expertise, and experience are required');
   }
 
-  // Normalize phone number and find expert by phone
-  const normalizedPhone = phone.replace(/[^\d]/g, "");
-  let expert = await Expert.findOne({ phone: normalizedPhone });
+    // Normalize phone number and find expert by phone
+    const normalizedPhone = phone.replace(/[^\d]/g, "");
+    let expert = await Expert.findOne({ phone: normalizedPhone });
 
-  // If expert exists but isn't fully registered (no email, firstName, or lastName)
+    // If expert exists but isn't fully registered (no email, firstName, or lastName)
   if (expert && !expert.email) {
     expert.firstName = firstName;
     expert.lastName = lastName;
@@ -139,15 +282,11 @@ const registerExpert = asyncHandler(async (req, res) => {
     expert.socialLink = socialLink;
     expert.areaOfExpertise = areaOfExpertise;
     expert.experience = experience;
-    expert.category = category;  // Save category field
+    expert.photoFile= photoUrl,
+    expert.certificationFile= certificationUrl,
+    // Save category field
 
-    // Save the certification and photo files if available
-    if (files?.certification?.[0]) {
-      expert.certificationFile = files.certification[0].path;
-    }
-    if (files?.photo?.[0]) {
-      expert.photoFile = files.photo[0].path;
-    }
+    
 
     await expert.save();
 
@@ -157,34 +296,28 @@ const registerExpert = asyncHandler(async (req, res) => {
   // If expert does not exist, create a new record
   if (!expert) {
     expert = new Expert({
-      phone: normalizedPhone,
+      email,
       firstName,
       lastName,
-      email,
       gender,
+      phone,
       socialLink,
-      areaOfExpertise,
+      areaOfExpertise: areaOfExpertise === "Others" ? specificArea : areaOfExpertise,
       experience,
-      category,  // Save category field
-      role: 'expert',
+      photoFile: photoUrl,
+      certificationFile: certificationUrl,
+      role: "expert",
+      status: "Approved",
     });
-
-    // Save the certification and photo files if available
-    // if (files?.certification?.[0]) {
-    //   expert.certificationFile = files.certification[0].path;
-    // }
-    // if (files?.photo?.[0]) {
-    //   expert.photoFile = files.photo[0].path;
-    // }
-
-    await expert.save();
-    return res.status(201).json(new ApiResponse(201, expert, 'Expert registered successfully'));
   }
 
-  // If expert already has email or full registration data
-  throw new ApiError(400, 'Expert already registered');
-});
-
+    await newExpert.save();
+    res.status(201).json({ message: "Expert registered successfully", expert: newExpert });
+  } catch (error) {
+    console.error("Registration Error:", error);
+    res.status(500).json({ error: "Server Error: " + error.message });
+  }
+};
 
 const logoutExpert = asyncHandler(async (req, res) => {
   await Expert.findByIdAndUpdate(
@@ -209,6 +342,8 @@ const logoutExpert = asyncHandler(async (req, res) => {
     .clearCookie("token", options)
     .json(new ApiResponse(200, {}, "User logged out"));
 });
+
+
 
 const getExperts = asyncHandler(async (req, res) => {
   const experts = await Expert.find();
