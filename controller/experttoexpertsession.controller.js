@@ -6,22 +6,22 @@ import ApiError from "../utils/ApiError.js"; // Assuming this is your custom err
 
 dotenv.config();
 
-// Helper function to check if the consulting expert's session time is available
+// Helper function to check if the consulting expert's session sessionTime is available
 const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) => {
-  // Find if there is any session already booked for the consulting expert at the same time and date
+  // Find if there is any session already booked for the consulting expert at the same sessionTime and sessionDate
   const existingSession = await ExpertToExpertSession.findOne({
     consultingExpertID: consultingExpertId,
     sessionDate,
     sessionTime,
   });
 
-  // If no session is found, it means the time is available
+  // If no session is found, it means the sessionTime is available
   return !existingSession;
 };
 
 // Expert-to-Expert session booking controller
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
-  const { consultingExpertId, areaOfExpertise, date, time, duration, optionalNote } = req.body;
+  const { consultingExpertId, areaOfExpertise, sessionDate, sessionTime, duration, optionalNote, firstName, lastName, email, mobile } = req.body;
 
   // Get the token from the Authorization header
   const token = req.header("Authorization")?.replace("Bearer ", "");
@@ -43,12 +43,12 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if the consulting expert's time and date are available
-    const isAvailable = await checkAvailability(consultingExpertId, date, time);
+    // Check if the consulting expert's sessionTime and sessionDate are available
+    const isAvailable = await checkAvailability(consultingExpertId, sessionDate, sessionTime);
 
     if (!isAvailable) {
       return res.status(400).json({
-        message: 'The selected date and time are already booked for the consulting expert. Please select a different time.',
+        message: 'The selected sessionDate and sessionTime are already booked for the consulting expert. Please select a different sessionTime.',
       });
     }
 
@@ -57,17 +57,21 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
       expertId, // The expert initiating the consultation
       consultingExpertID: consultingExpertId, // The expert being consulted
       areaOfExpertise,
-      sessionDate: date, // Session date in YYYY-MM-DD format
-      sessionTime: time, // Session time in HH:mm format
+      sessionDate, // Session sessionDate in YYYY-MM-DD format
+      sessionTime, // Session sessionTime in HH:mm format
       status: 'pending', // Initially set status as 'pending'
       duration, // Duration of the session (e.g., 'Quick-15min')
-      optionalNote, // Optional note for the session
+      optionalNote,
+      firstName,   // Save the user data
+      lastName,
+      mobile,
+      email, // Optional note for the session
     });
 
     // Save the session to the database
     await newSession.save();
 
-    // Update the session status to 'unconfirmed' (no payment confirmation yet)
+    // UpsessionDate the session status to 'unconfirmed' (no payment confirmation yet)
     newSession.status = 'unconfirmed';
     await newSession.save();
 
