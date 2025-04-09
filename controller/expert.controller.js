@@ -311,8 +311,9 @@ const registerExpert = async (req, res) => {
     });
   }
 
-    await newExpert.save();
-    res.status(201).json({ message: "Expert registered successfully", expert: newExpert });
+  await expert.save();
+  res.status(201).json({ message: "Expert registered successfully", expert });
+  
   } catch (error) {
     console.error("Registration Error:", error);
     res.status(500).json({ error: "Server Error: " + error.message });
