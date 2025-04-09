@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import connectDB from './db/db_config.js'; // Database configuration import
-import expertrouter from './routes/expert.routes.js';
+import expertRouter from './routes/expert.routes.js';
 import userRouter from './routes/user.Route.js';
 import VerifyJwt from './middleware/auth.middleware.js';
 import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
@@ -41,7 +41,7 @@ app.get('/', (req, res) => {
 // app.use('/api/admin', adminrouter)
 
 app.use('/api/userauth', userRouter);
-app.use('/api/expertauth', expertrouter);
+app.use('/api/expertauth', expertRouter);
 // app.use('/api/admin', adminRouter);
 // app.use('/api/adminauth', adminRouter);
 
