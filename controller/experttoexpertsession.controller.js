@@ -20,8 +20,8 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
   return !existingSession;
 };
 
-// Function to fetch all sessions booked by or for the expert
-const getAllBookedSessions = asyncHandler(async (req, res) => {
+/// Controller for "My Bookings" - When the logged-in expert is the one who booked the session (i.e., expertId)
+const getMyBookings = asyncHandler(async (req, res) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
   if (!token) {
@@ -32,21 +32,53 @@ const getAllBookedSessions = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const expertId = decoded._id;
 
-    // Find all sessions where the expert is either the expertId or consultingExpertID
+    // Find sessions where the logged-in expert is the one who booked the session (expertId)
     const sessions = await ExpertToExpertSession.find({
-      $or: [{ expertId: expertId }, { consultingExpertID: expertId }],
+      expertId: expertId,
     })
-      .populate("expertId", "firstName lastName") // Populate expert's name (add more fields if needed)
-      .populate("consultingExpertID", "firstName lastName") // Populate consulting expert's name (if necessary)
+      .populate("expertId", "firstName lastName")
+      .populate("consultingExpertID", "firstName lastName")
       .sort({ sessionDate: 1 });
 
     if (!sessions.length) {
-      return res
-        .status(404)
-        .json({ message: "No sessions found for this expert." });
+      return res.status(404).json({ message: "No bookings found for this expert." });
     }
 
-    res.status(200).json(sessions); // Return all sessions with populated expert details
+    res.status(200).json(sessions);
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching bookings.",
+      error: error.message,
+    });
+  }
+});
+
+// Controller for "My Sessions" - When the logged-in expert is the consulting expert (i.e., consultingExpertID)
+const getMySessions = asyncHandler(async (req, res) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.status(400).json({ message: "Token is required" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const expertId = decoded._id;
+
+    // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
+    const sessions = await ExpertToExpertSession.find({
+      consultingExpertID: expertId,
+    })
+      .populate("expertId", "firstName lastName")
+      .populate("consultingExpertID", "firstName lastName")
+      .sort({ sessionDate: 1 });
+
+    if (!sessions.length) {
+      return res.status(404).json({ message: "No sessions found for this expert." });
+    }
+
+    res.status(200).json(sessions);
   } catch (error) {
     console.error("Error fetching sessions:", error);
     res.status(500).json({
@@ -217,7 +249,8 @@ const declineSession = asyncHandler(async (req, res) => {
 
 export {
   bookExpertToExpertSession,
-  getAllBookedSessions,
+  getMySessions,
   acceptSession,
   declineSession,
+  getMyBookings
 };
