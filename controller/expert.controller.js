@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import upload from "../middleware/multer.middleware.js";
+import { upload } from '../middleware/multer.middleware.js';
 import { User } from "../model/user.model.js"; 
 import mongoose from "mongoose";
 import cloudinary from 'cloudinary';
