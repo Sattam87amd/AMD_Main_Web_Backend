@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import asyncHandler from "../utils/asyncHandler.js"; // Assuming you have this utility
 import ApiError from "../utils/ApiError.js"; // Assuming this is your custom error handler
+import { createZoomMeeting } from '../utils/createZoomMeeting.js';
 
 dotenv.config();
 
@@ -120,23 +121,59 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
+// Helper: Convert "Quick - 15min" → 15
+const getDurationInMinutes = (durationStr) => {
+  if (typeof durationStr === "number") return durationStr;
+  const match = durationStr.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 15;
+};
+
 const acceptSession = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params; // Get the session ID from the URL
+  const { sessionId } = req.params;
 
   try {
-    // Find the session by ID and update its status to 'confirmed'
-    const session = await ExpertToExpertSession.findByIdAndUpdate(
-      sessionId,
-      { status: "confirmed" },
-      { new: true }
-    );
+    const session = await ExpertToExpertSession.findById(sessionId);
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
     }
 
+    if (session.status !== "confirmed") {
+      const startTime = new Date(session.sessionDate); // assuming session.sessionDate is a valid date string
+      const [hours, minutes] = session.sessionTime.split(":"); // Split the session time (e.g. "03:00") into hours and minutes
+      startTime.setHours(hours, minutes, 0, 0); // Set the hours and minutes correctly in the Date object
+
+      // Convert the start time to ISO string for Zoom API
+      const startTimeISO = startTime.toISOString();
+      const duration = getDurationInMinutes(session.duration);
+
+      try {
+        console.log("📞 Creating Zoom meeting...");
+        const zoomData = await createZoomMeeting(
+          "aquibhingwala@gmail.com", // Replace with your licensed Zoom email
+          `Session with ${session.firstName} ${session.lastName}`,
+          startTimeISO,
+          duration
+        );
+
+        session.status = "confirmed";
+        session.zoomMeetingLink = zoomData.join_url;
+        session.zoomMeetingId = zoomData.id;
+        session.zoomPassword = zoomData.password;
+
+        await session.save();
+        console.log("✅ Zoom meeting created and session updated!");
+      } catch (zoomErr) {
+        console.error("❌ Zoom API Error:", zoomErr.response?.data || zoomErr.message);
+        return res.status(500).json({
+          message: "Zoom meeting creation failed",
+          error: zoomErr.response?.data || zoomErr.message,
+        });
+      }
+    }
+
     res.status(200).json({
-      message: "Session accepted successfully.",
+      message: "Session accepted and Zoom meeting created.",
       session,
     });
   } catch (error) {
@@ -147,6 +184,7 @@ const acceptSession = asyncHandler(async (req, res) => {
     });
   }
 });
+
 
 // Decline session controller
 const declineSession = asyncHandler(async (req, res) => {

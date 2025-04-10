@@ -10,6 +10,7 @@ import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
 import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
 // import adminRouter from "./routes/admin.routes.js"
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
+import zoomRouter from '../AMD_Main_Web_Backend/routes/zoom.routes.js'
 // Load environment variables
 dotenv.config();
 
@@ -44,7 +45,7 @@ app.use('/api/userauth', userRouter);
 app.use('/api/expertauth', expertRouter);
 // app.use('/api/admin', adminRouter);
 // app.use('/api/adminauth', adminRouter);
-
+app.use('/api/zoom', zoomRouter);
     
 
 app.use('/api/session', VerifyJwt, usertoexpertsessionRouter,experttoexpertsessionRouter)
