@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["user"],
     },
+    photoFile: String,
   },
   { timestamps: true, collection: "user" }
 );

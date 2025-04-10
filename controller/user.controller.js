@@ -6,7 +6,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
-
+import {uploadToCloudinary } from "../middleware/multer.middleware.js";
 dotenv.config();
 
 // ✅ Twilio client setup
@@ -183,6 +183,25 @@ const getUserById = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, user, "User retrieved"));
 });
 
+const uploadPhoto =  asyncHandler(async (req, res) =>{ try {
+  let photoUrl = null;
+  const userId = req.params.id;
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById };  // Export the new function
+
+    // If photo file is provided
+    if (req.files && req.files.photoFile && req.files.photoFile[0]) {
+      const photoFile = req.files.photoFile[0];
+      const photoResult = await uploadToCloudinary(photoFile, 'user/photos');
+      photoUrl = photoResult.secure_url;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { photoFile: photoUrl }, { new: true });
+
+} catch (error) {
+  console.error(error);
+  res.status(500).json({ message: 'Internal Server Error', error: error.message });
+}
+});
+
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto };  // Export the new function
 
