@@ -47,7 +47,19 @@ const experttoexpertsessionSchema = new Schema({
       },
       mobile:{
         type:Number
-      }
+      },
+      zoomMeetingLink: {
+        type: String, // Store the Zoom meeting URL
+        default: '',
+      },
+      zoomMeetingId: {
+        type: String, // Store the Zoom meeting ID
+        default: '',
+      },
+      zoomPassword: {
+        type: String, // Store the Zoom meeting password (if available)
+        default: '',
+      },
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt fields
   );
