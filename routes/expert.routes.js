@@ -10,17 +10,17 @@ import {
   getExpertsByArea
 } from "../controller/expert.controller.js";
 
-const expertrouter = express.Router();
+const router = express.Router();
 
 // Public Routes
-expertrouter.post("/request-otp", requestOtp);
-expertrouter.post("/verify-otp", verifyOtp);
+router.post("/request-otp", requestOtp);
+router.post("/verify-otp", verifyOtp);
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Use upload.fields to handle multiple file fields
-expertrouter.post(
+router.post(
   '/register',
   upload.fields([
     { name: 'photoFile', maxCount: 1 },
@@ -30,7 +30,7 @@ expertrouter.post(
 );
 // Protected Routes
 
-expertrouter.get("/:id", getExpertById);
-expertrouter.get("/area/:area", getExpertsByArea)
+router.get("/:id", getExpertById);
+router.get("/area/:area", getExpertsByArea)
 
-export default expertrouter;
+export default router;
