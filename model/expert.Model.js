@@ -4,7 +4,8 @@ const expertSchema = new mongoose.Schema(
   {
     phone: {
       type: String,
-      required: true,
+      required: false,
+      sparse: true,
       unique: true,
       match: /^\d{8,15}$/,
     },

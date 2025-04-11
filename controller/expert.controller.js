@@ -10,8 +10,16 @@ import { User } from "../model/user.model.js";
 import mongoose from "mongoose";
 import cloudinary from 'cloudinary';
 import streamifier from 'streamifier';
-
+import nodemailer from 'nodemailer';
 dotenv.config();
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
+
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // Helper functions
@@ -33,82 +41,131 @@ const sendOtp = async (phone) => {
 };
 
 const requestOtp = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
-  if (!phone) throw new ApiError(400, "Phone number required");
+  const { phone, email } = req.body;
+  if (!phone && !email) throw new ApiError(400, "Phone or email is required");
 
-  const normalizedPhone = normalizePhoneNumber(phone);
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
 
-  // Check if number exists in user collection
-  const existingUser = await User.findOne({ phone: normalizedPhone });
-  if (existingUser) {
-    throw new ApiError(400, "You've already registered as a user with this number");
+  let expert = null;
+  let isNewExpert = true;
+
+  // When phone login
+  if (phone) {
+    const normalizedPhone = normalizePhoneNumber(phone);
+
+    const existingUser = await User.findOne({ phone: normalizedPhone });
+    if (existingUser) throw new ApiError(400, "You've already registered as a user with this number");
+
+    expert = await Expert.findOne({ phone: normalizedPhone });
+    isNewExpert = !expert?.email;
+
+    if (expert) {
+      expert.otp = otp;
+      expert.otpExpires = otpExpires;
+    } else {
+      expert = new Expert({
+        phone: normalizedPhone,
+        otp,
+        otpExpires,
+        role: "expert",
+        status: "Approved"
+      });
+    }
+
+    await client.messages.create({
+      body: `Your verification code is: ${otp}`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone,
+    });
+    console.log(`OTP sent to phone: ${phone}`);
   }
 
-  // Check if number exists in expert collection
-  let expert = await Expert.findOne({ phone: normalizedPhone });
+  // When email login
+  else if (email) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) throw new ApiError(400, "You've already registered as a user with this email");
 
-  // If expert exists but isn't fully registered
-  const isNewExpert = !expert?.email;
+    expert = await Expert.findOne({ email });
+    isNewExpert = !expert?.phone;
 
-  // Generate and send OTP
-  const otp = await sendOtp(phone);
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    if (expert) {
+      expert.otp = otp;
+      expert.otpExpires = otpExpires;
+    } else {
+      expert = new Expert({
+        email,
+        otp,
+        otpExpires,
+        role: "expert",
+        status: "Approved"
+      });
+    }
 
-  if (expert) {
-    // Update existing expert record
-    expert.otp = otp;
-    expert.otpExpires = otpExpires;
-  } else {
-    // Create new expert record
-    expert = new Expert({
-      phone: normalizedPhone,
-      otp,
-      otpExpires,
-      role: "expert",
-      status:"Approved"
-    });
+    // Send email
+    const mailOptions = {
+      from: `"AMD Expert Portal" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: "Your OTP Code",
+      html: `<p>Your verification code is: <b>${otp}</b></p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`OTP sent to email: ${email}`);
   }
 
   await expert.save();
 
-  res.status(200).json(
-    new ApiResponse(200, { isNewExpert }, "OTP sent successfully")
-  );
+  res.status(200).json(new ApiResponse(200, { isNewExpert }, "OTP sent successfully"));
 });
 
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp } = req.body;
-  if (!phone || !otp) throw new ApiError(400, "Phone and OTP required");
+  const { phone, email, otp } = req.body;
+  if ((!phone && !email) || !otp) {
+    throw new ApiError(400, "Phone or Email and OTP are required");
+  }
 
-  const normalizedPhone = normalizePhoneNumber(phone);
-  const expert = await Expert.findOne({ phone: normalizedPhone });
+  let expert;
+
+  if (phone) {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    expert = await Expert.findOne({ phone: normalizedPhone });
+  } else if (email) {
+    expert = await Expert.findOne({ email });
+  }
 
   if (!expert || expert.otp !== otp || new Date() > expert.otpExpires) {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
+  // OTP is valid – clear it
   expert.otp = undefined;
   expert.otpExpires = undefined;
   await expert.save();
 
-  // Check if the phone number already exists and if the expert has already completed registration
+  // Check if registration is complete
   if (expert.firstName && expert.lastName && expert.email) {
-    // If expert has completed registration, return the token for login
     const token = jwt.sign(
-      { _id: expert._id, phone: expert.phone, role: "expert" ,status:"Approved"},
+      {
+        _id: expert._id,
+        role: "expert",
+        status: "Approved",
+        ...(phone && { phone: expert.phone }),
+        ...(email && { email: expert.email }),
+      },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
 
-    return res.status(200).json(new ApiResponse(200, 
-      { isNewExpert: false, token }, 
-      "OTP verified - login successful"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { isNewExpert: false, token }, "OTP verified - login successful"));
   }
 
-  // If the expert does not have a full name and email, they need to complete the registration
-  return res.status(200).json(new ApiResponse(200, 
-    { isNewExpert: true }, 
-    "OTP verified - complete registration"));
+  // Registration not complete
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { isNewExpert: true }, "OTP verified - complete registration"));
 });
 
 
@@ -294,22 +351,46 @@ const registerExpert = async (req, res) => {
   }
 
   // If expert does not exist, create a new record
-  if (!expert) {
-    expert = new Expert({
-      email,
-      firstName,
-      lastName,
-      gender,
-      phone,
-      socialLink,
-      areaOfExpertise: areaOfExpertise === "Others" ? specificArea : areaOfExpertise,
-      experience,
-      photoFile: photoUrl,
-      certificationFile: certificationUrl,
-      role: "expert",
-      status: "Approved",
-    });
-  }
+ // Check for existing expert by email (main identity from login)
+if (!expert) {
+  expert = await Expert.findOne({ email });
+}
+
+// If expert exists and is already fully registered, block re-registration
+if (expert && expert.firstName && expert.lastName && expert.areaOfExpertise) {
+  throw new ApiError(400, "This expert is already registered.");
+}
+
+// If expert exists but is partially registered (we update it)
+if (expert) {
+  expert.firstName = firstName;
+  expert.lastName = lastName;
+  expert.gender = gender;
+  expert.phone = phone;
+  expert.socialLink = socialLink;
+  expert.areaOfExpertise = areaOfExpertise === "Others" ? specificArea : areaOfExpertise;
+  expert.experience = experience;
+  expert.photoFile = photoUrl;
+  expert.certificationFile = certificationUrl;
+  expert.status = "Approved";
+} else {
+  // If still not found, create a new one
+  expert = new Expert({
+    email,
+    firstName,
+    lastName,
+    gender,
+    phone,
+    socialLink,
+    areaOfExpertise: areaOfExpertise === "Others" ? specificArea : areaOfExpertise,
+    experience,
+    photoFile: photoUrl,
+    certificationFile: certificationUrl,
+    role: "expert",
+    status: "Approved",
+  });
+}
+
 
   await expert.save();
   res.status(201).json({ message: "Expert registered successfully", expert });

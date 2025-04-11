@@ -4,13 +4,19 @@ const userSchema = new mongoose.Schema(
   {
     phone: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
       match: /^\d{8,15}$/,
     },
     firstName: String,
     lastName: String,
-    email: String,
+    email: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true,
+    },
     otp: String,
     otpExpires: Date,
     role: {
