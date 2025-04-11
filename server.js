@@ -11,6 +11,7 @@ import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.
 // import adminRouter from "./routes/admin.routes.js"
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
 import zoomRouter from '../AMD_Main_Web_Backend/routes/zoom.routes.js'
+import chatRoutes from './routes/chat.routes.js'
 // Load environment variables
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/userauth', userRouter);
 app.use('/api/expertauth', expertRouter);
+app.use('/api/chatbot', chatRoutes);
 // app.use('/api/admin', adminRouter);
 // app.use('/api/adminauth', adminRouter);
 app.use('/api/zoom', zoomRouter);
