@@ -35,7 +35,7 @@ const experttoexpertsessionSchema = new Schema({
         enum: ['Quick - 15min', 'Regular - 30min', 'Extra - 45min', 'All Access - 60min'],
         required: true, // Duration of the appointment
       },
-      optionalNote: {
+      note: {
         type: String, // Optional note for the appointment
         default: '',
       },
