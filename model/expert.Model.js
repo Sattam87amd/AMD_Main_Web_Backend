@@ -17,20 +17,36 @@ const expertSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      unique: true,
+      unique: true, 
       trim: true,
     },
     gender: {
       type: String,
       enum: ['Male', 'Female', 'Prefer not to say'],
     },
-    socialLink: String,
+    socialLink: {
+      type: String,
+      validate: {
+        validator: function(value) {
+          const linkedinPattern = /^(https?:\/\/)?(www\.)?linkedin\.com\/.*$/;
+          return linkedinPattern.test(value);
+        },
+        message: props => `${props.value} is not a valid LinkedIn URL!`
+      }
+    },
+   
     areaOfExpertise: String,
     experience: String,
     certificationFile: String,
     photoFile: String,
     otp: String,
     otpExpires: Date,
+    price: {
+      type: Number, // Save price as a number
+      required: false, // Set to true if it is a required field
+      min: 0, // You can set a minimum value, like 0, or leave it as is
+      max: 100, // Ensure the price is less than or equal to 100 Riyals
+    },
     role: {
       type: String,
       enum: ["expert"],

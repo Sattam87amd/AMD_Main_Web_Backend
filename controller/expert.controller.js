@@ -12,6 +12,13 @@ import cloudinary from 'cloudinary';
 import streamifier from 'streamifier';
 import nodemailer from 'nodemailer';
 dotenv.config();
+
+// LinkedIn URL validation function
+const validateLinkedInLink = (link) => {
+  const linkedinPattern = /^(https?:\/\/)?(www\.)?linkedin\.com\/.*$/;
+  return linkedinPattern.test(link);
+};
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -279,6 +286,12 @@ const uploadToCloudinary = (fileBuffer, folder, resource_type = 'image') => {
 
 
 // Controller to handle expert registration with file uploads
+// LinkedIn URL validation function
+// const validateLinkedInLink = (link) => {
+//   const linkedinPattern = /^(https?:\/\/)?(www\.)?linkedin\.com\/.*$/;
+//   return linkedinPattern.test(link);
+// };
+
 const registerExpert = async (req, res) => {
   try {
     // Log the received files
@@ -294,8 +307,14 @@ const registerExpert = async (req, res) => {
       socialLink,
       areaOfExpertise,
       specificArea,
-      experience
+      experience,
+      price
     } = req.body;
+
+    // Validate LinkedIn URL if socialLink (LinkedIn) is provided
+    if (socialLink && !validateLinkedInLink(socialLink)) {
+      throw new ApiError(400, "Please enter a valid LinkedIn link.");
+    }
 
     // Handle the file upload process
     let photoUrl = null;
@@ -315,91 +334,92 @@ const registerExpert = async (req, res) => {
       certificationUrl = certResult.secure_url;
     }
 
-      // Validate required fields (excluding phone)
-  if (!firstName || !lastName || !email || !gender) {
-    throw new ApiError(400, 'All fields are required');
-  }
+    // Validate required fields (excluding phone)
+    if (!firstName || !lastName || !email || !gender) {
+      throw new ApiError(400, 'All fields are required');
+    }
 
-  // Validate profile fields (optional, but must be filled in case of profile completion)
-  if (!socialLink || !areaOfExpertise || !experience) {
-    throw new ApiError(400, 'Social link, area of expertise, and experience are required');
-  }
+    // Validate profile fields (optional, but must be filled in case of profile completion)
+    if (!socialLink || !areaOfExpertise || !experience) {
+      throw new ApiError(400, 'Social link, area of expertise, and experience are required');
+    }
 
     // Normalize phone number and find expert by phone
     const normalizedPhone = phone.replace(/[^\d]/g, "");
     let expert = await Expert.findOne({ phone: normalizedPhone });
 
     // If expert exists but isn't fully registered (no email, firstName, or lastName)
-  if (expert && !expert.email) {
-    expert.firstName = firstName;
-    expert.lastName = lastName;
-    expert.email = email;
-    expert.gender = gender;
+    if (expert && !expert.email) {
+      expert.firstName = firstName;
+      expert.lastName = lastName;
+      expert.email = email;
+      expert.gender = gender;
 
-    expert.socialLink = socialLink;
-    expert.areaOfExpertise = areaOfExpertise;
-    expert.experience = experience;
-    expert.photoFile= photoUrl,
-    expert.certificationFile= certificationUrl,
-    // Save category field
+      expert.socialLink = socialLink;
+      expert.areaOfExpertise = areaOfExpertise;
+      expert.experience = experience;
+      expert.price= price;
+      expert.photoFile = photoUrl;
+      expert.certificationFile = certificationUrl;
+      // Save category field
 
-    
+      await expert.save();
+
+      return res.status(201).json(new ApiResponse(201, expert, 'Expert registered and profile completed successfully.'));
+    }
+
+    // If expert does not exist, create a new record
+    // Check for existing expert by email (main identity from login)
+    if (!expert) {
+      expert = await Expert.findOne({ email });
+    }
+
+    // If expert exists and is already fully registered, block re-registration
+    if (expert && expert.firstName && expert.lastName && expert.areaOfExpertise) {
+      throw new ApiError(400, "This expert is already registered.");
+    }
+
+    // If expert exists but is partially registered (we update it)
+    if (expert) {
+      expert.firstName = firstName;
+      expert.lastName = lastName;
+      expert.gender = gender;
+      expert.phone = phone;
+      expert.socialLink = socialLink;
+      expert.areaOfExpertise = areaOfExpertise === "Others" ? specificArea : areaOfExpertise;
+      expert.experience = experience;
+      expert.price=price;
+      expert.photoFile = photoUrl;
+      expert.certificationFile = certificationUrl;
+      expert.status = "Approved";
+    } else {
+      // If still not found, create a new one
+      expert = new Expert({
+        email,
+        firstName,
+        lastName,
+        gender,
+        phone,
+        socialLink,
+        areaOfExpertise: areaOfExpertise === "Others" ? specificArea : areaOfExpertise,
+        experience,
+        price,
+        photoFile: photoUrl,
+        certificationFile: certificationUrl,
+        role: "expert",
+        status: "Approved",
+      });
+    }
 
     await expert.save();
+    res.status(201).json({ message: "Expert registered successfully", expert });
 
-    return res.status(201).json(new ApiResponse(201, expert, 'Expert registered and profile completed successfully.'));
-  }
-
-  // If expert does not exist, create a new record
- // Check for existing expert by email (main identity from login)
-if (!expert) {
-  expert = await Expert.findOne({ email });
-}
-
-// If expert exists and is already fully registered, block re-registration
-if (expert && expert.firstName && expert.lastName && expert.areaOfExpertise) {
-  throw new ApiError(400, "This expert is already registered.");
-}
-
-// If expert exists but is partially registered (we update it)
-if (expert) {
-  expert.firstName = firstName;
-  expert.lastName = lastName;
-  expert.gender = gender;
-  expert.phone = phone;
-  expert.socialLink = socialLink;
-  expert.areaOfExpertise = areaOfExpertise === "Others" ? specificArea : areaOfExpertise;
-  expert.experience = experience;
-  expert.photoFile = photoUrl;
-  expert.certificationFile = certificationUrl;
-  expert.status = "Approved";
-} else {
-  // If still not found, create a new one
-  expert = new Expert({
-    email,
-    firstName,
-    lastName,
-    gender,
-    phone,
-    socialLink,
-    areaOfExpertise: areaOfExpertise === "Others" ? specificArea : areaOfExpertise,
-    experience,
-    photoFile: photoUrl,
-    certificationFile: certificationUrl,
-    role: "expert",
-    status: "Approved",
-  });
-}
-
-
-  await expert.save();
-  res.status(201).json({ message: "Expert registered successfully", expert });
-  
   } catch (error) {
     console.error("Registration Error:", error);
     res.status(500).json({ error: "Server Error: " + error.message });
   }
 };
+
 
 const logoutExpert = asyncHandler(async (req, res) => {
   await Expert.findByIdAndUpdate(
