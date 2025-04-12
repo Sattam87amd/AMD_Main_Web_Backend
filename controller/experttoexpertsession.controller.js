@@ -72,6 +72,7 @@ const getMySessions = asyncHandler(async (req, res) => {
     })
       .populate("expertId", "firstName lastName")
       .populate("consultingExpertID", "firstName lastName")
+      .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration") // Include 'note' field and other relevant fields
       .sort({ sessionDate: 1 });
 
     if (!sessions.length) {
@@ -88,9 +89,10 @@ const getMySessions = asyncHandler(async (req, res) => {
   }
 });
 
+
 // Expert-to-Expert session booking controller
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
-  const { consultingExpertId, areaOfExpertise, sessionDate, sessionTime, duration, optionalNote, firstName, lastName, email, mobile } = req.body;
+  const { consultingExpertId, areaOfExpertise, sessionDate, sessionTime, duration, note, firstName, lastName, email, mobile } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -126,7 +128,7 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
       sessionTime, // Session sessionTime in HH:mm format
       status: 'pending', // Initially set status as 'pending'
       duration, // Duration of the session (e.g., 'Quick-15min')
-      optionalNote,
+      note,
       firstName,   // Save the user data
       lastName,
       mobile,
