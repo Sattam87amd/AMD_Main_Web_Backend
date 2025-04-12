@@ -42,28 +42,30 @@ const sendOtp = async (phone) => {
 
 const requestOtp = asyncHandler(async (req, res) => {
   const { phone, email } = req.body;
+  
+  // Check if either phone or email is provided
   if (!phone && !email) throw new ApiError(400, "Phone or email is required");
 
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
 
   let expert = null;
   let isNewExpert = true;
 
-  // When phone login
+  // Handle phone login
   if (phone) {
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    const existingUser = await User.findOne({ phone: normalizedPhone });
-    if (existingUser) throw new ApiError(400, "You've already registered as a user with this number");
-
+    // Check if expert exists with this phone
     expert = await Expert.findOne({ phone: normalizedPhone });
-    isNewExpert = !expert?.email;
+    isNewExpert = !expert?.email; // Check if email is not set, meaning it's a new expert
 
     if (expert) {
+      // Update existing expert's OTP
       expert.otp = otp;
       expert.otpExpires = otpExpires;
     } else {
+      // Create a new expert if none exists
       expert = new Expert({
         phone: normalizedPhone,
         otp,
@@ -73,6 +75,7 @@ const requestOtp = asyncHandler(async (req, res) => {
       });
     }
 
+    // Send OTP via Twilio for phone login
     await client.messages.create({
       body: `Your verification code is: ${otp}`,
       from: process.env.TWILIO_PHONE_NUMBER,
@@ -81,18 +84,18 @@ const requestOtp = asyncHandler(async (req, res) => {
     console.log(`OTP sent to phone: ${phone}`);
   }
 
-  // When email login
+  // Handle email login
   else if (email) {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) throw new ApiError(400, "You've already registered as a user with this email");
-
+    // Check if expert exists with this email
     expert = await Expert.findOne({ email });
-    isNewExpert = !expert?.phone;
+    isNewExpert = !expert?.phone; // Check if phone is not set, meaning it's a new expert
 
     if (expert) {
+      // Update existing expert's OTP
       expert.otp = otp;
       expert.otpExpires = otpExpires;
     } else {
+      // Create a new expert if none exists
       expert = new Expert({
         email,
         otp,
@@ -102,7 +105,7 @@ const requestOtp = asyncHandler(async (req, res) => {
       });
     }
 
-    // Send email
+    // Send OTP via email for email login
     const mailOptions = {
       from: `"AMD Expert Portal" <${process.env.MAIL_USER}>`,
       to: email,
@@ -114,8 +117,10 @@ const requestOtp = asyncHandler(async (req, res) => {
     console.log(`OTP sent to email: ${email}`);
   }
 
+  // Save the expert data to the database
   await expert.save();
 
+  // Respond with success message
   res.status(200).json(new ApiResponse(200, { isNewExpert }, "OTP sent successfully"));
 });
 
@@ -150,8 +155,8 @@ const verifyOtp = asyncHandler(async (req, res) => {
         _id: expert._id,
         role: "expert",
         status: "Approved",
-        ...(phone && { phone: expert.phone }),
-        ...(email && { email: expert.email }),
+        ...(phone && { phone: expert.phone }),  // Include phone only if available
+        ...(email && { email: expert.email }),  // Include email only if available
       },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "7d" }
@@ -162,11 +167,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, { isNewExpert: false, token }, "OTP verified - login successful"));
   }
 
-  // Registration not complete
+  // Registration not complete, return data to complete the registration
   return res
     .status(200)
     .json(new ApiResponse(200, { isNewExpert: true }, "OTP verified - complete registration"));
 });
+
 
 
 // Merged registerExpert Controller

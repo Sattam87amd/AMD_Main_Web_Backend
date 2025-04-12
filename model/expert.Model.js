@@ -4,10 +4,8 @@ const expertSchema = new mongoose.Schema(
   {
     phone: {
       type: String,
-      required: false,
-      sparse: true,
-      unique: true,
-      match: /^\d{8,15}$/,
+      required: false, // Make phone optional
+      sparse: true, // Allow multiple documents with null/undefined phone // Ensure uniqueness for non-null phone numbers // Optional validation for phone number
     },
     firstName: {
       type: String,
