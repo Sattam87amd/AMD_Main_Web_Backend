@@ -50,7 +50,8 @@ app.use('/api/chatbot', chatRoutes);
 app.use('/api/zoom', zoomRouter);
     
 
-app.use('/api/session', VerifyJwt, usertoexpertsessionRouter,experttoexpertsessionRouter)
+app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter)
+app.use('/api/session', VerifyJwt,experttoexpertsessionRouter)
 
 
 // Define the Port
