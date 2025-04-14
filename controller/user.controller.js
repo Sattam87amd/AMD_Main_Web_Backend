@@ -51,7 +51,7 @@ const sendOtpToEmail = async (email, otp) => {
       subject: "Your OTP Code",
       html: `<p>Your OTP is: <b>${otp}</b></p>`,
     };
-    
+
     await transporter.sendMail(mailOptions);
     console.log(`OTP sent to email: ${email}`);
   } catch (error) {
@@ -134,14 +134,15 @@ const verifyOtp = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
-  user.otp = null;
-  user.otpExpires = null;
+  user.otp = undefined;
+  user.otpExpires = undefined;
   await user.save();
 
   // If the user doesn't exist or has incomplete information, proceed with registration
-  if (!user.firstName) {
+  if (!user.firstName || !user.lastName) {
     user.firstName = firstName;
     user.lastName = lastName;
+    user.email = email;
     await user.save();
 
     const token = jwt.sign(
@@ -164,19 +165,36 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, phone} = req.body;
-  if (!firstName || !lastName || !email || !phone) {
+  const { firstName, lastName, email, phone } = req.body;
+  if (!firstName || !lastName || !email) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const normalizedPhone = normalizePhoneNumber(phone);
-  let user = await User.findOne({ phone: normalizedPhone });
+  let user;
+  let normalizedPhone = null;
 
-  if (!user) throw new ApiError(400, "OTP verification required before registration");
+  if (phone) {
+    normalizedPhone = normalizePhoneNumber(phone);
+    user = await User.findOne({ phone: normalizedPhone });
+  } else if (email) {
+    user = await User.findOne({ email });
+  }
 
-  user.firstName = firstName;
-  user.lastName = lastName;
-  user.email = email;
+  if (!user) {
+    // Create new user if not found
+    user = new User({
+      firstName,
+      lastName,
+      email,
+      phone: normalizedPhone
+    });
+  } else {
+    // Update existing user
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.email = email;
+  }
+
   await user.save();
 
   return res.status(201).json(
