@@ -72,7 +72,7 @@ const getMySessions = asyncHandler(async (req, res) => {
     })
       .populate("expertId", "firstName lastName")
       .populate("consultingExpertID", "firstName lastName")
-      .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration") // Include 'note' field and other relevant fields
+      // .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration status") // Include 'note' field and other relevant fields
       .sort({ sessionDate: 1 });
 
     if (!sessions.length) {

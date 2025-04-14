@@ -12,6 +12,7 @@ import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
 import zoomRouter from '../AMD_Main_Web_Backend/routes/zoom.routes.js'
 import chatRoutes from './routes/chat.routes.js'
+import ratingRoutes from './routes/rating.routes.js'; // <-- Import the rating routes
 // Load environment variables
 dotenv.config();
 
@@ -52,6 +53,10 @@ app.use('/api/zoom', zoomRouter);
 
 app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter)
 app.use('/api/session', VerifyJwt,experttoexpertsessionRouter)
+
+
+// ... other app.use statements for routes
+app.use('/api/ratings', ratingRoutes); // <-- Add rating routes
 
 
 // Define the Port
