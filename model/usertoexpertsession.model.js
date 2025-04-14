@@ -12,7 +12,7 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       ref: 'Expert', // Referencing the _id of the Expert model
       required: true,
     },
-    category: {
+    areaOfExpertise: {
       type: String,
       required: true, // Category for the appointment
     },
@@ -31,7 +31,7 @@ const usertoexpertsessionSchema = new mongoose.Schema(
     },
     duration: {
       type: String,
-      enum: ['Quick-15 min', 'Regular-30 min', 'Extra-45 min', 'All Access-60 min'],
+      enum: ['Quick - 15min', 'Regular - 30 min', 'Extra - 45 min', 'All Access-60 min'],
       required: true, // Duration of the appointment
     },
     optionalNote: {

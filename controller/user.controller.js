@@ -6,8 +6,18 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
-import {uploadToCloudinary } from "../middleware/multer.middleware.js";
+import { uploadToCloudinary } from "../middleware/multer.middleware.js";
+import nodemailer from 'nodemailer';
+
 dotenv.config();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
 
 // ✅ Twilio client setup
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -16,15 +26,15 @@ const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 const normalizePhoneNumber = (phone) => phone.replace(/[^\d]/g, "");
 
 // ✅ Helper function: Send OTP via SMS
-const sendOtp = async (phone) => {
+const sendOtpToPhone = async (phone) => {
   try {
     const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit OTP
     await client.messages.create({
-      body: `Your verification code is: ${otp}`, // ✅ Fixed string interpolation
+      body: `Your verification code is: ${otp}`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to ${phone}`); // ✅ Fixed console log
+    console.log(`OTP sent to ${phone}`);
     return otp;
   } catch (error) {
     console.error("Error sending OTP via Twilio:", error);
@@ -32,121 +42,165 @@ const sendOtp = async (phone) => {
   }
 };
 
+// ✅ Helper function: Send OTP via Email
+const sendOtpToEmail = async (email, otp) => {
+  try {
+    const mailOptions = {
+      from: `"Your App" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: "Your OTP Code",
+      html: `<p>Your OTP is: <b>${otp}</b></p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`OTP sent to email: ${email}`);
+  } catch (error) {
+    console.error("Error sending OTP via Email:", error);
+    throw new ApiError(500, "Failed to send OTP via email");
+  }
+};
+
 // ✅ Request OTP (Sends OTP and stores it in the database)
 const requestOtp = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
-  if (!phone) throw new ApiError(400, "Phone number is required");
+  const { phone, email } = req.body;
 
-  const normalizedPhone = normalizePhoneNumber(phone);
+  if (!phone && !email) throw new ApiError(400, "Phone number or email is required");
 
-  // ✅ Check if the user exists
-  let user = await User.findOne({ phone: normalizedPhone });
+  let otp;
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+  let user;
 
-  if (user) {
-    // User exists, send OTP for verification
-    const otp = await sendOtp(phone);
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+  // Generate OTP once
+  otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // Update the user's OTP and expiration
-    user.otp = otp;
-    user.otpExpires = otpExpires;
-    await user.save(); // Save OTP details in the DB
+  if (phone) {
+    // Phone-based OTP
+    const normalizedPhone = normalizePhoneNumber(phone);
+    user = await User.findOne({ phone: normalizedPhone });
 
-    return res.status(200).json(
-      new ApiResponse(200, { isNewUser: false }, "OTP sent successfully")
-    );
-  } else {
-    // User doesn't exist, proceed with registration, but also send OTP
-    const otp = await sendOtp(phone);
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
+    if (user) {
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+      await user.save();
+      // Send OTP via SMS
+      await sendOtpToPhone(phone, otp);
+      return res.status(200).json(new ApiResponse(200, { isNewUser: false }, "OTP sent successfully via phone"));
+    } else {
+      user = new User({ phone: normalizedPhone, otp, otpExpires, role: "user" });
+      await user.save();
+      // Send OTP via SMS
+      await sendOtpToPhone(phone, otp);
+      return res.status(200).json(new ApiResponse(200, { isNewUser: true }, "User not found, please proceed with registration"));
+    }
+  }
 
-    // Create a new user with OTP (registration will be completed later)
-    user = new User({ phone: normalizedPhone, otp, otpExpires, role: "user" });
-    await user.save(); // Save new user with OTP
+  if (email) {
+    // Email-based OTP
+    const existingUser = await User.findOne({ email });
 
-    return res.status(200).json(
-      new ApiResponse(200, { isNewUser: true }, "User not found, please proceed with registration")
-    );
+    if (existingUser) {
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+      await existingUser.save();
+      // Send OTP via Email
+      await sendOtpToEmail(email, otp);
+      return res.status(200).json(new ApiResponse(200, { isNewUser: false }, "OTP sent successfully via email"));
+    } else {
+      user = new User({ email, otp, otpExpires, role: "user" });
+      await user.save();
+      // Send OTP via Email
+      await sendOtpToEmail(email, otp);
+      return res.status(200).json(new ApiResponse(200, { isNewUser: true }, "User not found, please proceed with registration"));
+    }
   }
 });
 
 
 // ✅ Verify OTP (Checks OTP and logs in/registers the user)
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp, firstName, lastName, email } = req.body; // Only firstName, lastName, and email for registration
-  if (!phone || !otp) throw new ApiError(400, "Phone and OTP are required");
+  const { phone, email, otp, firstName, lastName } = req.body;
+  if (!phone && !email || !otp) throw new ApiError(400, "Phone or Email and OTP are required");
 
-  const normalizedPhone = normalizePhoneNumber(phone);
-  let user = await User.findOne({ phone: normalizedPhone });
+  let user;
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+  if (phone) {
+    user = await User.findOne({ phone: normalizedPhone });
+  } else if (email) {
+    user = await User.findOne({ email });
+  }
 
   if (!user || user.otp !== otp || new Date() > user.otpExpires) {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
-  // Reset OTP after successful verification
-  user.otp = null;
-  user.otpExpires = null;
+  user.otp = undefined;
+  user.otpExpires = undefined;
   await user.save();
 
   // If the user doesn't exist or has incomplete information, proceed with registration
-  if (!user.firstName) {
-    // Only update firstName, lastName, and email
+  if (!user.firstName || !user.lastName) {
     user.firstName = firstName;
     user.lastName = lastName;
     user.email = email;
+    await user.save();
 
-    await user.save(); // Save the registration details
-
-    // Generate a JWT token for the newly registered user
     const token = jwt.sign(
-      { _id: user._id, phone: user.phone, role: "user" },
+      { _id: user._id, phone: user.phone, email: user.email, role: "user" },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
 
-    return res.status(200).json(
-      new ApiResponse(200, { isNewUser: true, token }, "OTP verified, registration completed")
-    );
+    return res.status(200).json(new ApiResponse(200, { isNewUser: true, token }, "OTP verified, registration completed"));
   }
 
-  // If the user is existing and has a complete registration, generate the token
   const token = jwt.sign(
-    { _id: user._id, phone: user.phone, role: "user" },
+    { _id: user._id, phone: user.phone, email: user.email, role: "user" },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "7d" }
   );
 
-  return res.status(200).json(
-    new ApiResponse(200, { isNewUser: false, token }, "OTP verified, login successful")
-  );
+  return res.status(200).json(new ApiResponse(200, { isNewUser: false, token }, "OTP verified, login successful"));
 });
-
-
 
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, phone} = req.body;
-  if (!firstName || !lastName || !email || !phone) {
+  const { firstName, lastName, email, phone } = req.body;
+  if (!firstName || !lastName || !email) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const normalizedPhone = normalizePhoneNumber(phone);
-  let user = await User.findOne({ phone: normalizedPhone });
+  let user;
+  let normalizedPhone = null;
 
-  if (!user) throw new ApiError(400, "OTP verification required before registration");
+  if (phone) {
+    normalizedPhone = normalizePhoneNumber(phone);
+    user = await User.findOne({ phone: normalizedPhone });
+  } else if (email) {
+    user = await User.findOne({ email });
+  }
 
-  user.firstName = firstName;
-  user.lastName = lastName;
-  user.email = email;
+  if (!user) {
+    // Create new user if not found
+    user = new User({
+      firstName,
+      lastName,
+      email,
+      phone: normalizedPhone
+    });
+  } else {
+    // Update existing user
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.email = email;
+  }
+
   await user.save();
-
- 
 
   return res.status(201).json(
     new ApiResponse(201, { message: "User registered successfully" })
   );
 });
-
 
 // ✅ Get User Profile (Fetch user details by ID)
 const getUserProfile = asyncHandler(async (req, res) => {
@@ -166,29 +220,22 @@ const getUserProfile = asyncHandler(async (req, res) => {
 const getUserById = asyncHandler(async (req, res) => {
   const userId = req.params.id;
 
-  // Log the userId to check its value
-  console.log("Received userId:", userId);
-  
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new ApiError(400, "Invalid user ID format");
   }
-  
 
-  // Convert userId to ObjectId after validation
   const objectId = new mongoose.Types.ObjectId(userId);
-
   const user = await User.findById(objectId);
   if (!user) throw new ApiError(404, "User not found");
 
   res.status(200).json(new ApiResponse(200, user, "User retrieved"));
 });
 
-const uploadPhoto =  asyncHandler(async (req, res) =>{ try {
-  let photoUrl = null;
-  const userId = req.params.id;
+const uploadPhoto = asyncHandler(async (req, res) => {
+  try {
+    let photoUrl = null;
+    const userId = req.params.id;
 
-
-    // If photo file is provided
     if (req.files && req.files.photoFile && req.files.photoFile[0]) {
       const photoFile = req.files.photoFile[0];
       const photoResult = await uploadToCloudinary(photoFile, 'user/photos');
@@ -196,12 +243,11 @@ const uploadPhoto =  asyncHandler(async (req, res) =>{ try {
     }
 
     const user = await User.findByIdAndUpdate(userId, { photoFile: photoUrl }, { new: true });
-
-} catch (error) {
-  console.error(error);
-  res.status(500).json({ message: 'Internal Server Error', error: error.message });
-}
+    res.status(200).json(new ApiResponse(200, user, "Photo uploaded successfully"));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
 });
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto };  // Export the new function
-
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto };
