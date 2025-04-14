@@ -43,8 +43,7 @@ const expertSchema = new mongoose.Schema(
     price: {
       type: Number, // Save price as a number
       required: false, // Set to true if it is a required field
-      min: 0, // You can set a minimum value, like 0, or leave it as is
-      max: 100, // Ensure the price is less than or equal to 100 Riyals
+      min: 100, // You can set a minimum value, like 0, or leave it as is // Ensure the price is less than or equal to 100 Riyals
     },
     role: {
       type: String,
