@@ -27,7 +27,7 @@ const experttoexpertsessionSchema = new Schema({
       },
       status: {
         type: String,
-        enum: ['pending', 'unconfirmed' , 'confirmed', 'completed' , 'rejected'],
+        enum: ['pending', 'unconfirmed' , 'confirmed', 'completed' , 'rejected', 'Rating Submitted'],
         default: 'pending', // Status of the appointment
       },
       duration: {
