@@ -11,8 +11,7 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
       req.header("Authorization")?.replace("Bearer ", "") || // From Authorization header
       req.body.token;  // Or from the request body
 
-    console.log("Extracted Token:", token); // Debug log to verify the token format
-
+   
     // If no token is found, throw an error
     if (!token || token.trim() === "") {
       throw new ApiError(401, "Unauthorized Request: No token provided");
@@ -26,7 +25,7 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
     // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    console.log("Decoded Token:", decodedToken);  // Debugging to verify decoded token
+    // Debugging to verify decoded token
 
     let user = null;
     let expert = null;
@@ -46,7 +45,7 @@ const VerifyJwt = asyncHandler(async (req, res, next) => {
       // Fetch the expert associated with the token using _id (not expertId)
       expert = await Expert.findById(decodedToken?._id); // Use _id directly here
 
-      console.log("Expert:", expert); // Log the expert to verify if the query is correct
+      // Log the expert to verify if the query is correct
 
       if (!expert) {
         throw new ApiError(401, "Invalid Access Token: Expert not found");

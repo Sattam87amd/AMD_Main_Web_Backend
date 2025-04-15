@@ -34,8 +34,20 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       enum: ['Quick - 15min', 'Regular - 30min', 'Extra - 45min', 'All Access-60min'],
       required: true, // Duration of the appointment
     },
-    optionalNote: {
+    note: {
       type: String, // Optional note for the appointment
+      default: '',
+    },
+    zoomMeetingLink: {
+      type: String, // Store the Zoom meeting URL
+      default: '',
+    },
+    zoomMeetingId: {
+      type: String, // Store the Zoom meeting ID
+      default: '',
+    },
+    zoomPassword: {
+      type: String, // Store the Zoom meeting password (if available)
       default: '',
     },
   },

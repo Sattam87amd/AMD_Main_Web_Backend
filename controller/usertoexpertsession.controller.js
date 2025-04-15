@@ -18,7 +18,7 @@ const checkAvailability = async (expertId, sessionDate, sessionTime) => {
 
 // Book session controller wrapped in asyncHandler
 const bookSession = asyncHandler(async (req, res) => {
-  const { expertId, areaOfExpertise, date, time, duration, optionalNote } = req.body;
+  const { expertId, areaOfExpertise, date, time, duration, note } = req.body;
   const userId = req.user._id;  // Extract userId from req.user after VerifyJwt middleware
 
   // Check if the time and date for the session are available
@@ -39,7 +39,7 @@ const bookSession = asyncHandler(async (req, res) => {
     sessionTime: time,
     status: 'pending', // Initially set status as 'pending'
     duration,
-    optionalNote,
+    note,
   });
 console.log(newSession)
   // Save the session in the database
@@ -125,7 +125,7 @@ const getExpertSessions = asyncHandler(async (req, res) => {
 
 // Controller for booking a session for user-to-expert
 const bookUserToExpertSession = asyncHandler(async (req, res) => {
-  const { expertId, areaOfExpertise, sessionDate, sessionTime, duration, optionalNote } = req.body;
+  const { expertId, areaOfExpertise, sessionDate, sessionTime, duration, note } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -154,7 +154,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
       sessionTime, 
       status: "pending", // Initially set status as 'pending'
       duration, // Duration of the session
-      optionalNote,
+      note,
     });
 
     await newSession.save();
@@ -176,12 +176,12 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
-// Helper function to get the duration in minutes from the string format
-const getDurationInMinutes = (durationStr) => {
-  if (typeof durationStr === "number") return durationStr;
-  const match = durationStr.match(/(\d+)/);
-  return match ? parseInt(match[1], 10) : 15;
-};
+// // Helper function to get the duration in minutes from the string format
+// const getDurationInMinutes = (durationStr) => {
+//   if (typeof durationStr === "number") return durationStr;
+//   const match = durationStr.match(/(\d+)/);
+//   return match ? parseInt(match[1], 10) : 15;
+// };
 
 // Accept the session and create a Zoom meeting
 const acceptSession = asyncHandler(async (req, res) => {
@@ -267,12 +267,27 @@ const declineSession = asyncHandler(async (req, res) => {
     });
   }
 });
+const getDurationInMinutes = (duration) => {
+  switch (duration) {
+    case "Quick - 15min":
+      return 15;
+    case "Regular - 30min":
+      return 30;
+    case "Extra - 45min":
+      return 45;
+    case "All Access - 60min":
+      return 60;
+    default:
+      return 30; // Default duration
+  }
+};
 
 export { bookSession,
   bookUserToExpertSession,
   getExpertSessions,
   acceptSession,
   declineSession,
+  getDurationInMinutes,
   getUserBookings
  };
 

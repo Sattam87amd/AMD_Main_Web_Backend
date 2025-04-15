@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import asyncHandler from "../utils/asyncHandler.js"; // Assuming you have this utility
 import ApiError from "../utils/ApiError.js"; // Assuming this is your custom error handler
 import { createZoomMeeting } from '../utils/createZoomMeeting.js';
+import { UserToExpertSession } from "../model/usertoexpertsession.model.js";
 
 dotenv.config();
 
@@ -67,19 +68,32 @@ const getMySessions = asyncHandler(async (req, res) => {
     const expertId = decoded._id;
 
     // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
-    const sessions = await ExpertToExpertSession.find({
+    const expertSessions = await ExpertToExpertSession.find({
       consultingExpertID: expertId,
     })
       .populate("expertId", "firstName lastName")
       .populate("consultingExpertID", "firstName lastName")
       // .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration status") // Include 'note' field and other relevant fields
-      .sort({ sessionDate: 1 });
+      .sort({ expertSessionDate: 1 });
 
-    if (!sessions.length) {
+    if (!expertSessions.length) {
       return res.status(404).json({ message: "No sessions found for this expert." });
     }
 
-    res.status(200).json(sessions);
+     // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
+     const userSessions = await UserToExpertSession.find({
+     
+    })
+      .populate("userId", "firstName lastName")
+      .populate("expertId", "firstName lastName")
+      // .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration status") // Include 'note' field and other relevant fields
+      .sort({ userSessionDate: 1 });
+
+    if (!expertSessions.length) {
+      return res.status(404).json({ message: "No sessions found for this expert." });
+    }
+
+    res.status(200).json({expertSessions, userSessions});
   } catch (error) {
     console.error("Error fetching sessions:", error);
     res.status(500).json({

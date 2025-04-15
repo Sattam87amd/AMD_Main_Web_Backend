@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Rating from '../model/rating.model.js';
+import { ExpertToExpertSession } from '../model/experttoexpertsession.model.js';
 
 /**
  * @desc    Create a new rating
@@ -84,5 +85,36 @@ export const getExpertRating = async (req, res) => {
   } catch (error) {
     console.error('Error fetching expert rating:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Update Booking Status to "Rating Submitted"
+export const updateBookingStatus = async (req, res) => {
+  const { id } = req.params;  // Booking ID passed in the URL
+  const { status } = req.body;  // Status to update (in this case, 'Rating Submitted')
+
+  if (status !== "Rating Submitted") {
+    return res.status(400).json({ message: "Invalid status update" });
+  }
+
+  try {
+    // Find the booking by ID and update the status
+    const updatedSession = await ExpertToExpertSession.findByIdAndUpdate(
+      id, // The booking's unique ID
+      { status: "Rating Submitted" }, // Set status to 'Rating Submitted'
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedSession) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({
+      message: "Booking status updated to Rating Submitted",
+      booking: updatedSession,
+    });
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
