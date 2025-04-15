@@ -145,15 +145,11 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.email = email;
     await user.save();
 
-    const token = jwt.sign(
-      { _id: user._id, phone: user.phone, email: user.email, role: "user" },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json(new ApiResponse(200, { isNewUser: true, token }, "OTP verified, registration completed"));
+    // Do not generate the token here for new users
+    return res.status(200).json(new ApiResponse(200, { isNewUser: true }, "OTP verified, registration completed"));
   }
 
+  // Generate a token only for existing users (not for new users)
   const token = jwt.sign(
     { _id: user._id, phone: user.phone, email: user.email, role: "user" },
     process.env.ACCESS_TOKEN_SECRET,
@@ -162,6 +158,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200, { isNewUser: false, token }, "OTP verified, login successful"));
 });
+
 
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {

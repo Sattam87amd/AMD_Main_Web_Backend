@@ -1,4 +1,4 @@
-import {mongoose, Schema} from 'mongoose';
+import { mongoose, Schema } from 'mongoose';
 
 const usertoexpertsessionSchema = new mongoose.Schema(
   {
@@ -26,7 +26,7 @@ const usertoexpertsessionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'unconfirmed' , 'confirmed', 'completed' , 'rejected'],
+      enum: ['pending', 'unconfirmed', 'confirmed', 'completed', 'rejected'],
       default: 'pending', // Status of the appointment
     },
     duration: {
@@ -35,9 +35,11 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       required: true, // Duration of the appointment
     },
     note: {
-      type: String, // Optional note for the appointment
+      type: String, // Optional note for the appo intment
       default: '',
     },
+    sessionType: { type: String },
+
     zoomMeetingLink: {
       type: String, // Store the Zoom meeting URL
       default: '',
