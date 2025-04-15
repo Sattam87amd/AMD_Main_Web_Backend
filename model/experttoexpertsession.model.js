@@ -48,6 +48,8 @@ const experttoexpertsessionSchema = new Schema({
       mobile:{
         type:Number
       },
+      sessionType:{type: String},
+      
       zoomMeetingLink: {
         type: String, // Store the Zoom meeting URL
         default: '',
