@@ -52,7 +52,7 @@ app.use('/api/zoom', zoomRouter);
     
 
 app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter)
-app.use('/api/session', VerifyJwt,experttoexpertsessionRouter)
+app.use('/api/session', VerifyJwt,experttoexpertsessionRouter, usertoexpertsessionRouter)
 
 
 // ... other app.use statements for routes

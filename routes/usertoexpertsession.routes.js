@@ -1,9 +1,7 @@
 import { Router } from 'express';
-import { bookSession,
+import { 
     bookUserToExpertSession,
-    getExpertSessions,
-    acceptSession,
-    declineSession,
+  
     getUserBookings,
 } from '../controller/usertoexpertsession.controller.js';
 import VerifyJwt from '../middleware/auth.middleware.js';
@@ -24,13 +22,13 @@ router.post("/usertoexpertsession", bookUserToExpertSession);
 // Route for getting user bookings (User's past bookings)
 router.get("/Userbookings", getUserBookings);
 
-// Route for getting expert sessions (Sessions where the expert is providing service)
-router.get("/sessions", getExpertSessions);
+// // Route for getting expert sessions (Sessions where the expert is providing service)
+// router.get("/sessions", getExpertSessions);
 
-// Route for accepting a session (Confirmed by the expert)
-router.patch("/session/:sessionId/accept", acceptSession);
+// // Route for accepting a session (Confirmed by the expert)
+// router.patch("/session/:sessionId/accept", acceptSession);
 
-// Route for declining a session (Rejected by the expert)
-router.patch("/session/:sessionId/decline", declineSession);
+// // Route for declining a session (Rejected by the expert)
+// router.patch("/session/:sessionId/decline", declineSession);
 
 export default router;
