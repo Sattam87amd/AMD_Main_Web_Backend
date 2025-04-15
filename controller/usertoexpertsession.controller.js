@@ -18,7 +18,7 @@ const checkAvailability = async (expertId, sessionDate, sessionTime) => {
 
 // Book session controller wrapped in asyncHandler
 const bookSession = asyncHandler(async (req, res) => {
-  const { expertId, areaOfExpertise, date, time, duration, note } = req.body;
+  const { expertId, areaOfExpertise, date, time, duration, note,firstName, lastName, email, phone  } = req.body;
   const userId = req.user._id;  // Extract userId from req.user after VerifyJwt middleware
 
   // Check if the time and date for the session are available
@@ -40,6 +40,10 @@ const bookSession = asyncHandler(async (req, res) => {
     status: 'pending', // Initially set status as 'pending'
     duration,
     note,
+    firstName,
+  lastName,
+  email,
+  phone,
   });
 console.log(newSession)
   // Save the session in the database
@@ -156,6 +160,10 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
       status: "pending", // Initially set status as 'pending'
       duration, // Duration of the session
       note,
+      firstName,
+      lastName,
+      email,
+      phone
     });
 
     await newSession.save();

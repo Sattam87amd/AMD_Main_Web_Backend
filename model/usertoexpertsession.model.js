@@ -48,10 +48,16 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       type: String, // Store the Zoom meeting ID
       default: '',
     },
-    zoomPassword: {
-      type: String, // Store the Zoom meeting password (if available)
-      default: '',
-    },
+    // zoomPassword: {
+    //   type: String, // Store the Zoom meeting password (if available)
+    //   default: '',
+    // },
+     // 👇 Add these
+     firstName: { type: String }, // Ensure these fields are present
+     lastName: { type: String },
+     email: { type: String },
+     phone: { type: String },
+
   },
   { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );
