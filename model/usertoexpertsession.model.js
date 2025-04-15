@@ -31,7 +31,7 @@ const usertoexpertsessionSchema = new mongoose.Schema(
     },
     duration: {
       type: String,
-      enum: ['Quick - 15min', 'Regular - 30 min', 'Extra - 45 min', 'All Access-60 min'],
+      enum: ['Quick - 15min', 'Regular - 30min', 'Extra - 45min', 'All Access-60min'],
       required: true, // Duration of the appointment
     },
     optionalNote: {
