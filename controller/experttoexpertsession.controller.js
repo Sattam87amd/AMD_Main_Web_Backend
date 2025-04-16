@@ -179,14 +179,21 @@ const getDurationInMinutes = (durationStr) => {
 
 const acceptSession = asyncHandler(async (req, res) => {
   const { sessionId } = req.params;
-
+  
   try {
-    const session = await ExpertToExpertSession.findById(sessionId);
+    // Try to find the session in both ExpertToExpertSession and UserToExpertSession
+    let session = await ExpertToExpertSession.findById(sessionId);
+    
+    if (!session) {
+      session = await UserToExpertSession.findById(sessionId);
+    }
 
+    // If neither session is found, return an error
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
     }
 
+    // Check if the session status is not 'confirmed'
     if (session.status !== "confirmed") {
       const startTime = new Date(session.sessionDate); // assuming session.sessionDate is a valid date string
       const [hours, minutes] = session.sessionTime.split(":"); // Split the session time (e.g. "03:00") into hours and minutes
@@ -200,7 +207,7 @@ const acceptSession = asyncHandler(async (req, res) => {
         console.log("📞 Creating Zoom meeting...");
         const zoomData = await createZoomMeeting(
           "aquibhingwala@gmail.com", // Replace with your licensed Zoom email
-          `Session with ${session.firstName} ${session.lastName}`,
+          `Session with ${session.firstName || session.userFirstName} ${session.lastName || session.userLastName}`,
           startTimeISO,
           duration
         );
@@ -235,21 +242,26 @@ const acceptSession = asyncHandler(async (req, res) => {
 });
 
 
-// Decline session controller
+
 const declineSession = asyncHandler(async (req, res) => {
   const { sessionId } = req.params; // Get the session ID from the URL
 
   try {
-    // Find the session by ID and update its status to 'rejected'
-    const session = await ExpertToExpertSession.findByIdAndUpdate(
-      sessionId,
-      { status: "rejected" },
-      { new: true }
-    );
+    // Try to find the session in both ExpertToExpertSession and UserToExpertSession
+    let session = await ExpertToExpertSession.findById(sessionId);
+    
+    if (!session) {
+      session = await UserToExpertSession.findById(sessionId);
+    }
 
+    // If neither session is found, return an error
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
     }
+
+    // Update the session status to 'rejected'
+    session.status = "rejected";
+    await session.save();
 
     res.status(200).json({
       message: "Session rejected successfully.",
@@ -263,6 +275,7 @@ const declineSession = asyncHandler(async (req, res) => {
     });
   }
 });
+
 
 export {
   bookExpertToExpertSession,
