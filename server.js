@@ -10,7 +10,7 @@ import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
 import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
 // import adminRouter from "./routes/admin.routes.js"
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
-import zoomRouter from '../AMD_Main_Web_Backend/routes/zoom.routes.js'
+import zoomRouter from './routes/zoom.routes.js'
 import chatRoutes from './routes/chat.routes.js'
 import ratingRoutes from './routes/rating.routes.js'; // <-- Import the rating routes
 // Load environment variables
