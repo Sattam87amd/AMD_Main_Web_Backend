@@ -8,6 +8,7 @@ import { Expert } from '../model/expert.model.js';
  * @access  Public or Protected (depends on your setup)
  */
 
+
 export const createRating = async (req, res) => {
   try {
     const { expertId, raterId, sessionType, rating, comment } = req.body;
@@ -35,6 +36,11 @@ export const createRating = async (req, res) => {
       return res.status(404).json({ message: 'Expert not found' });
     }
 
+    // Ensure ratings array is initialized
+    if (!expert.ratings) {
+      expert.ratings = [];  // Initialize the ratings array if it's not already initialized
+    }
+
     // Add the new rating to the expert's ratings array
     expert.ratings.push(newRating._id);
     expert.numberOfRatings += 1;
@@ -59,6 +65,7 @@ export const createRating = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 /**
  * @desc    Get aggregated rating (avg + count) for an expert
