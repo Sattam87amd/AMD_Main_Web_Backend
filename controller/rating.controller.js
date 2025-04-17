@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
 import Rating from '../model/rating.model.js';
 import { ExpertToExpertSession } from '../model/experttoexpertsession.model.js';
-
+import { Expert } from '../model/expert.model.js';
 /**
  * @desc    Create a new rating
  * @route   POST /api/ratings
  * @access  Public or Protected (depends on your setup)
  */
+
 export const createRating = async (req, res) => {
   try {
     const { expertId, raterId, sessionType, rating, comment } = req.body;
@@ -16,7 +17,7 @@ export const createRating = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Create and save rating
+    // Create and save the rating document
     const newRating = new Rating({
       expertId,
       raterId,
@@ -26,6 +27,28 @@ export const createRating = async (req, res) => {
     });
 
     await newRating.save();
+
+    // Now update the Expert model with the new rating and recalculate the average rating
+    const expert = await Expert.findById(expertId);
+
+    if (!expert) {
+      return res.status(404).json({ message: 'Expert not found' });
+    }
+
+    // Add the new rating to the expert's ratings array
+    expert.ratings.push(newRating._id);
+    expert.numberOfRatings += 1;
+
+    // Recalculate the average rating using incremental calculation
+    const previousAverageRating = expert.averageRating;
+    const previousNumberOfRatings = expert.numberOfRatings - 1; // Before this new rating
+
+    const newAverageRating = (previousAverageRating * previousNumberOfRatings + rating) / expert.numberOfRatings;
+
+    expert.averageRating = newAverageRating;
+
+    // Save the expert model with the updated ratings and average rating
+    await expert.save();
 
     return res.status(201).json({
       message: 'Rating submitted successfully',

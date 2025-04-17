@@ -23,6 +23,18 @@ const expertSchema = new mongoose.Schema(
       type: String,
       enum: ['Male', 'Female', 'Prefer not to say'],
     },
+    ratings: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Rating', // Reference to the Rating model (you'll define this later)
+    }],
+    averageRating: {
+      type: Number,
+      default: 0, // Initialize with a default value
+    },
+    numberOfRatings: {
+      type: Number,
+      default: 0, // Initialize with 0
+    },
     socialLink: {
       type: String,
       validate: {
