@@ -67,6 +67,14 @@ const expertSchema = new mongoose.Schema(
      default:"Approved"
 
     },
+    charityEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    charityPercentage: {
+      type: Number,
+      default: 0,
+    },
 
   },
   { timestamps: true, collection: 'expert' }
