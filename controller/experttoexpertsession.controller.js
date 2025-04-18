@@ -82,7 +82,7 @@ const getMySessions = asyncHandler(async (req, res) => {
 
      // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
      const userSessions = await UserToExpertSession.find({
-     
+        expertId:expertId
     })
       .populate("userId", "firstName lastName")
       .populate("expertId", "firstName lastName")

@@ -54,8 +54,7 @@ const expertSchema = new mongoose.Schema(
     otpExpires: Date,
     price: {
       type: Number, // Save price as a number
-      required: false, // Set to true if it is a required field
-      min: 100, // You can set a minimum value, like 0, or leave it as is // Ensure the price is less than or equal to 100 Riyals
+      required: true, // Set to true if it is a required field
     },
     role: {
       type: String,

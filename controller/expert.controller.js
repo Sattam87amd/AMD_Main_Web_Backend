@@ -324,6 +324,8 @@ const registerExpert = async (req, res) => {
 
     // Handle the file upload process
     let photoUrl = null;
+
+    
     let certificationUrl = null;
 
     // If photo file is provided

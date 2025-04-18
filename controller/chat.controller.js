@@ -22,7 +22,7 @@ export const chatbotProxy = async (req, res) => {
         body: JSON.stringify({
           contents: [
             {
-              role: "user",
+              // role: "user",
               parts: [
                 { text: message }
               ]
