@@ -484,6 +484,62 @@ const getExpertsByArea = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, experts, "Experts fetched successfully"));
 });
 
+// Controller for updating the charity settings
+const updateExpertCharity = async (req, res) => {
+  try {
+    // Extract the token from the Authorization header (Bearer <token>)
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
+    // Decode the token to get the expert _id
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+    if (!decoded || !decoded._id) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Now we have the expert's MongoDB ObjectId (_id) from the decoded token
+    const expertId = decoded._id;
+
+    // Find the expert by MongoDB ObjectId
+    const expert = await Expert.findById(expertId);
+
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: "Expert not found",
+      });
+    }
+
+    // Proceed to update the charity information
+    const { charityEnabled, charityPercentage, charityName } = req.body;
+
+    // Update the charity settings for this expert
+    expert.charityEnabled = charityEnabled;
+    expert.charityPercentage = charityPercentage;
+    expert.charityName = charityName;
+
+    // Save the updated expert data
+    await expert.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Charity settings updated successfully",
+      data: expert,
+    });
+  } catch (error) {
+    console.error("Error updating charity settings:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while updating charity settings.",
+      error: error.message,
+    });
+  }
+};
+
 export {
 requestOtp,
 verifyOtp,
@@ -491,5 +547,6 @@ registerExpert,
 getExperts,
 getExpertById,
 logoutExpert,
-getExpertsByArea
+getExpertsByArea,
+updateExpertCharity
 };

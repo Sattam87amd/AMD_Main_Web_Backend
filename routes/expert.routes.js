@@ -7,7 +7,8 @@ import {
   verifyOtp,
   registerExpert,
   getExpertById,
-  getExpertsByArea
+  getExpertsByArea,
+  updateExpertCharity
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -32,5 +33,6 @@ router.post(
 
 router.get("/:id", getExpertById);
 router.get("/area/:area", getExpertsByArea)
+router.put("/update-charity", updateExpertCharity);
 
 export default router;
