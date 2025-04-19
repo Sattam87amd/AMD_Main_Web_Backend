@@ -157,7 +157,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
   // Check if registration is complete
   if (expert.firstName && expert.lastName && expert.email) {
-    const expertToken = jwt.sign(
+    const token = jwt.sign(
       {
         _id: expert._id,
         role: "expert",
@@ -171,7 +171,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, { isNewExpert: false, expertToken }, "OTP verified - login successful"));
+      .json(new ApiResponse(200, { isNewExpert: false, token }, "OTP verified - login successful"));
   }
 
   // Registration not complete, return data to complete the registration
@@ -434,7 +434,7 @@ const logoutExpert = asyncHandler(async (req, res) => {
     req.expert._id,
     {
       $unset: {
-        expertToken: 1,
+        token: 1,
       },
     },
     {
@@ -449,7 +449,7 @@ const logoutExpert = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .clearCookie("expertToken", options)
+    .clearCookie("token", options)
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
@@ -484,111 +484,6 @@ const getExpertsByArea = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, experts, "Experts fetched successfully"));
 });
 
-
-
-// Update charity info for an existing expert
-// Controller for updating the charity settings
-const updateExpertCharity = async (req, res) => {
-  try {
-    // Extract the token from the Authorization header (Bearer <token>)
-    const token = req.header("Authorization")?.replace("Bearer ", "");
-
-    if (!token) {
-      return res.status(400).json({ message: "Token is required" });
-    }
-
-    // Decode the token to get the expert _id
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
-    if (!decoded || !decoded._id) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
-    // Now we have the expert's MongoDB ObjectId (_id) from the decoded token
-    const expertId = decoded._id;
-
-    // Find the expert by MongoDB ObjectId
-    const expert = await Expert.findById(expertId);
-
-    if (!expert) {
-      return res.status(404).json({
-        success: false,
-        message: "Expert not found",
-      });
-    }
-
-    // Proceed to update the charity information
-    const { charityEnabled, charityPercentage, charityName } = req.body;
-
-    // Update the charity settings for this expert
-    expert.charityEnabled = charityEnabled;
-    expert.charityPercentage = charityPercentage;
-    expert.charityName = charityName;
-
-    // Save the updated expert data
-    await expert.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Charity settings updated successfully",
-      data: expert,
-    });
-  } catch (error) {
-    console.error("Error updating charity settings:", error);
-    res.status(500).json({
-      success: false,
-      message: "An error occurred while updating charity settings.",
-      error: error.message,
-    });
-  }
-};
-
-// Controller for fetching the charity settings
-const getExpertCharitySettings = async (req, res) => {
-  try {
-    // Extract the token from the Authorization header
-    const token  = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-      return res.status(400).json({ message: "Expert token is required" });
-    }
-
-    // Decode the token to get the expert's _id (MongoDB ObjectId)
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
-    if (!decoded || !decoded._id) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
-    const expertId = decoded._id; // MongoDB _id of the expert (valid ObjectId)
-
-    // Check if expertId is a valid ObjectId
-    if (!ObjectId.isValid(expertId)) {
-      return res.status(400).json({ message: "Invalid expert _id" });
-    }
-
-    // Find the expert by their MongoDB _id
-    const expert = await Expert.findById(expertId);
-
-    if (!expert) {
-      return res.status(404).json({ message: "Expert not found" });
-    }
-
-    // Return the charity settings data
-    res.status(200).json({
-      success: true,
-      data: {
-        charityEnabled: expert.charityEnabled,
-        charityPercentage: expert.charityPercentage,
-        charityName: expert.charityName,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching charity settings:", error);
-    res.status(500).json({ message: "Error fetching charity settings" });
-  }
-};
-
 export {
 requestOtp,
 verifyOtp,
@@ -596,7 +491,5 @@ registerExpert,
 getExperts,
 getExpertById,
 logoutExpert,
-getExpertsByArea,
-updateExpertCharity,
-getExpertCharitySettings
+getExpertsByArea
 };
