@@ -8,7 +8,8 @@ import {
   registerExpert,
   getExpertById,
   getExpertsByArea,
-  updateExpertCharity
+  updateExpertCharity,
+  getExperts
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.post(
 // Protected Routes
 
 router.get("/:id", getExpertById);
+router.get("/", getExperts)
 router.get("/area/:area", getExpertsByArea)
 router.put("/update-charity", updateExpertCharity);
 

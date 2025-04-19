@@ -456,9 +456,19 @@ const logoutExpert = asyncHandler(async (req, res) => {
 
 
 const getExperts = asyncHandler(async (req, res) => {
-  const experts = await Expert.find();
-  res.status(200).json(new ApiResponse(200, experts, "Experts retrieved"));
+  try {
+    const experts = await Expert.find(); // Fetch all experts
+    res.status(200).json(new ApiResponse(200, experts, "Experts retrieved"));
+  } catch (error) {
+    console.error("Error fetching experts:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching experts.",
+      error: error.message,
+    });
+  }
 });
+
 
 const getExpertById = asyncHandler(async (req, res) => {
   const expertId = req.params.id;
