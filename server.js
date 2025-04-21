@@ -14,6 +14,9 @@ import zoomRouter from './routes/zoom.routes.js'
 import chatRoutes from './routes/chat.routes.js'
 import ratingRoutes from './routes/rating.routes.js'; // <-- Import the rating routes
 import { getExperts } from './controller/expert.controller.js';
+import adminRoutes from './routes/admin.routes.js'
+
+import sessionRoutes from './routes/session.routes.js'
 // Load environment variables
 dotenv.config();
 
@@ -23,6 +26,7 @@ const app = express();
 // Middleware
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse incoming JSON data
+
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -46,6 +50,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/userauth', userRouter);
 app.use('/api/expertauth', expertRouter);
+app.use('/api/adminauth', adminRoutes)
 app.use('/api/chatbot', chatRoutes);
 // app.use('/api/admin', adminRouter);
 // app.use('/api/adminauth', adminRouter);
@@ -54,6 +59,8 @@ app.use('/api/zoom', zoomRouter);
 
 app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter)
 app.use('/api/session', VerifyJwt,experttoexpertsessionRouter, usertoexpertsessionRouter)
+
+app.use('/api/sessions', sessionRoutes)
 
 
 

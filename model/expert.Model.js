@@ -63,8 +63,8 @@ const expertSchema = new mongoose.Schema(
     },
     status:{
      type:String,
-     enum:["Approved"],
-     default:"Approved"
+     enum:["Pending","Approved","Rejected"],
+     default:"Pending"
 
     },
     charityEnabled: {

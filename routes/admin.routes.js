@@ -1,14 +1,12 @@
-// import { Router } from 'express';
-// import {adminLogin, getAdminDetails, updateAdminProfile } from '../controller/admin.controller.js';
-// import VerifyJwt from '../middleware/auth.middleware.js';
+import express from 'express';
 
-// const router = Router();
+import { Router } from 'express';
+import { loginAdmin, updateExpertStatus } from '../controller/admin.controller.js';
 
-// // Public Route for Admin Login
-// router.post('/login', adminLogin);
 
-// // Protected Routes (Require JWT)
-// router.get('/details', VerifyJwt, getAdminDetails);
-// router.put('/update-profile', VerifyJwt, updateAdminProfile);
 
-// export default router;
+const router = Router();
+
+router.post('/login',loginAdmin )
+router.put('/experts/:expertId/status', updateExpertStatus);
+export default router;
