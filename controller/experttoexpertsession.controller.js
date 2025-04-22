@@ -55,7 +55,6 @@ const getMyBookings = asyncHandler(async (req, res) => {
   }
 });
 
-// Controller for "My Sessions" - When the logged-in expert is the consulting expert (i.e., consultingExpertID)
 const getMySessions = asyncHandler(async (req, res) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -73,27 +72,23 @@ const getMySessions = asyncHandler(async (req, res) => {
     })
       .populate("expertId", "firstName lastName")
       .populate("consultingExpertID", "firstName lastName")
-      // .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration status") // Include 'note' field and other relevant fields
       .sort({ expertSessionDate: 1 });
 
-    if (!expertSessions.length) {
-      return res.status(404).json({ message: "No sessions found for this expert." });
-    }
-
-     // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
-     const userSessions = await UserToExpertSession.find({
-        expertId:expertId
+    // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
+    const userSessions = await UserToExpertSession.find({
+      expertId: expertId,
     })
       .populate("userId", "firstName lastName")
-      .populate("expertId", "firstName lastName")
-      // .select("note sessionDate sessionTime areaOfExpertise firstName lastName duration status") // Include 'note' field and other relevant fields
-      .sort({ userSessionDate: 1 });
+      .populate("expertId", "firstName lastName");
+      
 
-    if (!expertSessions.length) {
+    // Check if both expertSessions and userSessions are empty
+    if (expertSessions.length === 0 && userSessions.length === 0) {
       return res.status(404).json({ message: "No sessions found for this expert." });
     }
 
-    res.status(200).json({expertSessions, userSessions});
+    // Respond with the sessions
+    res.status(200).json({ expertSessions, userSessions });
   } catch (error) {
     console.error("Error fetching sessions:", error);
     res.status(500).json({
@@ -102,7 +97,6 @@ const getMySessions = asyncHandler(async (req, res) => {
     });
   }
 });
-
 
 // Expert-to-Expert session booking controller
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
