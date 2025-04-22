@@ -6,7 +6,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { upload } from '../middleware/multer.middleware.js';
-import { User } from "../model/user.model.js"; 
+import { User } from "../model/user.model.js";
 import mongoose from "mongoose";
 import cloudinary from 'cloudinary';
 import streamifier from 'streamifier';
@@ -49,7 +49,7 @@ const sendOtp = async (phone) => {
 
 const requestOtp = asyncHandler(async (req, res) => {
   const { phone, email } = req.body;
-  
+
   // Check if either phone or email is provided
   if (!phone && !email) throw new ApiError(400, "Phone or email is required");
 
@@ -277,10 +277,11 @@ const uploadToCloudinary = (fileBuffer, folder, resource_type = 'image') => {
     }
 
     const uploadStream = cloudinary.v2.uploader.upload_stream(
-      { folder, resource_type: 'auto',
+      {
+        folder, resource_type: 'auto',
         transformation: [
-          { width: 800, height: 800, crop: 'limit' } ]
-       },
+          { width: 800, height: 800, crop: 'limit' }]
+      },
       (error, result) => {
         if (error) return reject(error);
         resolve(result);
@@ -325,7 +326,7 @@ const registerExpert = async (req, res) => {
     // Handle the file upload process
     let photoUrl = null;
 
-    
+
     let certificationUrl = null;
 
     // If photo file is provided
@@ -366,7 +367,7 @@ const registerExpert = async (req, res) => {
       expert.socialLink = socialLink;
       expert.areaOfExpertise = areaOfExpertise;
       expert.experience = experience;
-      expert.price= price;
+      expert.price = price;
       expert.photoFile = photoUrl;
       expert.certificationFile = certificationUrl;
       // Save category field
@@ -396,7 +397,7 @@ const registerExpert = async (req, res) => {
       expert.socialLink = socialLink;
       expert.areaOfExpertise = areaOfExpertise === "Others" ? specificArea : areaOfExpertise;
       expert.experience = experience;
-      expert.price=price;
+      expert.price = price;
       expert.photoFile = photoUrl;
       expert.certificationFile = certificationUrl;
       expert.status = "Approved";
@@ -550,13 +551,133 @@ const updateExpertCharity = async (req, res) => {
   }
 };
 
+
+
+const calculateAge = (dob) => {
+  const today = new Date();
+  const birthDate = new Date(dob);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const month = today.getMonth();
+  if (
+    month < birthDate.getMonth() ||
+    (month === birthDate.getMonth() && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+  return age;
+};
+
+const updateExpert= async (req, res) => {
+  try {
+    const expertId = req.body._id || req.params.id;
+
+    if (!expertId) {
+      return res.status(400).json({ message: "Expert ID is required" });
+    }
+
+    const expert = await Expert.findById(expertId);
+
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: "Expert not found",
+      });
+    }
+
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      areaOfExpertise,
+      dateOfBirth,
+    } = req.body;
+
+    if (firstName) expert.firstName = firstName;
+    if (lastName) expert.lastName = lastName;
+    if (email) expert.email = email;
+    if (phone) expert.phone = phone;
+    if (areaOfExpertise) expert.areaOfExpertise = areaOfExpertise;
+    if (dateOfBirth) {
+      expert.dateOfBirth = dateOfBirth;
+      expert.age = calculateAge(dateOfBirth);
+    }
+
+    await expert.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: expert,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while updating profile.",
+      error: error.message,
+    });
+  }
+};
+
+
+const updateExpertExperience = async (req, res) => {
+  try {
+    const expertId = req.body._id || req.params.id;
+
+    if (!expertId) {
+      return res.status(400).json({ message: "Expert ID is required" });
+    }
+
+    const expert = await Expert.findById(expertId);
+
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: "Expert not found",
+      });
+    }
+
+    const { aboutMe, advice } = req.body;
+
+    // Map aboutMe to experience field in the database
+    if (aboutMe) expert.experience = aboutMe;
+
+    // advice should be an array of strings
+    if (Array.isArray(advice)) expert.advice = advice;
+
+    await expert.save();
+
+    res.status(200).json({
+      success: true,
+      message: "About section updated successfully",
+      data: {
+        experience: expert.experience,
+        advice: expert.advice,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating about section:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while updating the about section.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 export {
-requestOtp,
-verifyOtp,
-registerExpert,
-getExperts,
-getExpertById,
-logoutExpert,
-getExpertsByArea,
-updateExpertCharity
+  requestOtp,
+  verifyOtp,
+  registerExpert,
+  getExperts,
+  getExpertById,
+  logoutExpert,
+  getExpertsByArea,
+  updateExpertCharity,
+  updateExpert,
+  updateExpertExperience 
 };

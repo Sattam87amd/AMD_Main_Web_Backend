@@ -75,7 +75,14 @@ const expertSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    dateOfBirth: {
+      type: Date,
+    },
+    advice: {
+      type: [String], // Array of strings to store multiple pieces of advice
+      default: [], // Default to an empty array if no advice is provided
+    },
+    age: Number
   },
   { timestamps: true, collection: 'expert' }
 );
