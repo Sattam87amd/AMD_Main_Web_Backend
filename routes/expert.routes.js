@@ -9,7 +9,9 @@ import {
   getExpertById,
   getExpertsByArea,
   updateExpertCharity,
-  getExperts
+  getExperts,
+  updateExpert,
+  updateExpertExperience 
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -36,5 +38,7 @@ router.get("/:id", getExpertById);
 router.get("/", getExperts)
 router.get("/area/:area", getExpertsByArea)
 router.put("/update-charity", updateExpertCharity);
+router.put('/:id', updateExpert);
+router.put('/:id/experience', updateExpertExperience);
 
 export default router;
