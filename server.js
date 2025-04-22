@@ -6,14 +6,17 @@ import connectDB from './db/db_config.js'; // Database configuration import
 import expertRouter from './routes/expert.routes.js';
 import userRouter from './routes/user.Route.js';
 import VerifyJwt from './middleware/auth.middleware.js';
-import  usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
-import  experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
-// import adminRouter from "./routes/admin.routes.js"
+import usertoexpertsessionRouter from './routes/usertoexpertsession.routes.js';
+import experttoexpertsessionRouter from './routes/experttoexpertsession.routes.js';
 import { ExpertToExpertSession } from './model/experttoexpertsession.model.js';
-import zoomRouter from './routes/zoom.routes.js'
-import chatRoutes from './routes/chat.routes.js'
+import zoomRouter from './routes/zoom.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 import ratingRoutes from './routes/rating.routes.js'; // <-- Import the rating routes
 import { getExperts } from './controller/expert.controller.js';
+import adminRoutes from './routes/admin.routes.js';
+import sessionRoutes from './routes/session.routes.js';
+import axios from 'axios'; // <-- Import axios
+
 // Load environment variables
 dotenv.config();
 
@@ -36,30 +39,27 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-// app.use('/api/forms', formRoutes);
-// app.use('/api/auth', loginRoutes);
-// app.use('/api/register', registerRoutes);
-
-// app.use('/api/user', userrouter)
-// app.use('/api/expert', expertrouter)
-// app.use('/api/admin', adminrouter)
-
 app.use('/api/userauth', userRouter);
 app.use('/api/expertauth', expertRouter);
+app.use('/api/adminauth', adminRoutes);
 app.use('/api/chatbot', chatRoutes);
-// app.use('/api/admin', adminRouter);
-// app.use('/api/adminauth', adminRouter);
 app.use('/api/zoom', zoomRouter);
-    
+app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter);
+app.use('/api/session', VerifyJwt, experttoexpertsessionRouter, usertoexpertsessionRouter);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/ratings', ratingRoutes);
 
-app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter)
-app.use('/api/session', VerifyJwt,experttoexpertsessionRouter, usertoexpertsessionRouter)
-
-
-
-// ... other app.use statements for routes
-app.use('/api/ratings', ratingRoutes); // <-- Add rating routes
-
+// Add the countries route here
+app.get('/api/countries', async (req, res) => {
+  try {
+    const response = await axios.get('https://restcountries.com/v3.1/all'); // Using Restcountries API
+    const countries = response.data.map(country => country.name.common); // Extracting the country names
+    res.json(countries); // Return the list of countries as a JSON response
+  } catch (error) {
+    console.error('Error fetching countries:', error);
+    res.status(500).json({ message: 'Error fetching countries' });
+  }
+});
 
 // Define the Port
 const PORT = process.env.PORT || 5000;

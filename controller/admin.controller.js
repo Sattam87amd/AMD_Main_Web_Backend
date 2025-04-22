@@ -1,69 +1,57 @@
-// import jwt from "jsonwebtoken";
-// import { Admin } from "../model/admin.model.js";  // Corrected the import
-// import asyncHandler from "../utils/asyncHandler.js";
-// import ApiError from "../utils/ApiError.js";
-// import ApiResponse from "../utils/ApiResponse.js";
-// import bcrypt from "bcryptjs";  // Make sure bcrypt is imported
+import {Admin} from '../model/admin.model.js'
+import { Expert } from '../model/expert.model.js';
+import dotenv from 'dotenv';
 
-// // 📌 Admin Login (Verify email and password)
-// const adminLogin = asyncHandler(async (req, res) => {
-//   const { email, password } = req.body;
+dotenv.config()
 
-//   if (!email || !password) {
-//     throw new ApiError(400, "Email and password are required");
-//   }
+ const loginAdmin = (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ message: 'Email and password are required.' });
+  }
 
-//   // Check if admin exists
-//   let admin = await Admin.findOne({ email });
+  // Simple check against our single user
+  if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+    // (Optionally issue a JWT or set a session here)
+    return res.status(200).json({ message: 'Login successful!' });
+  } else {
+    return res.status(401).json({ message: 'Invalid credentials.' });
+  }
+};
 
-//   if (!admin) {
-//     throw new ApiError(400, "Invalid email or password");
-//   }
+// Approve or reject an expert
+const updateExpertStatus = async (req, res) => {
+  const { expertId } = req.params;
+  const { status } = req.body;
 
-//   // Compare password with hashed password
-//   const isMatch = await bcrypt.compare(password, admin.password);
-//   if (!isMatch) {
-//     throw new ApiError(400, "Invalid email or password");
-//   }
+  // Only allow "Approved" or "Rejected"
+  if (!['Approved', 'Rejected'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid status value' });
+  }
 
-//   // ✅ Generate JWT Token
-//   const token = jwt.sign(
-//     { _id: admin._id, email: admin.email },
-//     process.env.ACCESS_TOKEN_SECRET,
-//     { expiresIn: "7d" } // Token expires in 7 days
-//   );
+  try {
+    const updatedExpert = await Expert.findByIdAndUpdate(
+      expertId,
+      { status },
+      { new: true }
+    );
 
-//   return res.status(200).json(
-//     new ApiResponse(200, { token }, "Admin login successful")
-//   );
-// });
+    if (!updatedExpert) {
+      return res.status(404).json({ success: false, message: 'Expert not found' });
+    }
 
-// // 📌 Get Admin Details (Protected Route)
-// const getAdminDetails = asyncHandler(async (req, res) => {
-//   const admin = await Admin.findById(req.admin._id).select("email");
+    res.status(200).json({
+      success: true,
+      message: `Expert ${status.toLowerCase()} successfully`,
+      data: updatedExpert,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
-//   if (!admin) {
-//     throw new ApiError(404, "Admin not found");
-//   }
 
-//   return res.status(200).json(new ApiResponse(200, admin, "Admin fetched successfully"));
-// });
 
-// // 📌 Update Admin Profile (Protected Route)
-// const updateAdminProfile = asyncHandler(async (req, res) => {
-//   const { email, password } = req.body;
-
-//   if (!email || !password) {
-//     throw new ApiError(400, "Email and password are required");
-//   }
-
-//   const admin = await Admin.findByIdAndUpdate(
-//     req.admin._id,
-//     { email, password },
-//     { new: true, select: "email" }
-//   ); 
-
-//   return res.status(200).json(new ApiResponse(200, admin, "Admin profile updated successfully"));
-// });
-
-// export { adminLogin, getAdminDetails, updateAdminProfile };
+export {loginAdmin, updateExpertStatus}
