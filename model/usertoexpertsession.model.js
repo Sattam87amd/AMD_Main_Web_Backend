@@ -16,14 +16,17 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       type: String,
       required: true, // Category for the appointment
     },
-    sessionDate: {
-      type: Date,
-      required: true, // Date of the appointment
-    },
-    sessionTime: {
-      type: String,
-      required: true, // Time of the appointment (string format like '10:00 AM', '2:00 PM', etc.)
-    },
+    // sessionDate: {
+    //   type: Date,
+    //   required: true, // Date of the appointment
+    // },
+    // sessionTime: {
+    //   type: String,
+    //   required: true, // Time of the appointment (string format like '10:00 AM', '2:00 PM', etc.)
+    // },
+    slots: [{
+      type: Array,
+    }],
     status: {
       type: String,
       enum: ['pending', 'unconfirmed', 'confirmed', 'completed', 'rejected', 'Rating Submitted'],

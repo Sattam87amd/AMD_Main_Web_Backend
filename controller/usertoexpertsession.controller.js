@@ -6,11 +6,9 @@ import asyncHandler from '../utils/asyncHandler.js'; // Assuming you have an asy
 dotenv.config();
 
 // Function to check if the session time is available
-const checkAvailability = async (expertId, sessionDate, sessionTime) => {
+const checkAvailability = async (expertId) => {
   const existingSession = await UserToExpertSession.findOne({
     expertId,
-    sessionDate,
-    sessionTime,
   });
 
   return !existingSession; // Returns true if no session is found, i.e., time is available
@@ -36,7 +34,7 @@ const getUserBookings = asyncHandler(async (req, res) => {
       .populate("userId", "firstName lastName")
       .populate("expertId", "firstName lastName")
       
-      .sort({ sessionDate: 1 });
+      // .sort({ sessionDate: 1 });
 
     if (!sessions.length) {
       return res.status(404).json({ message: "No bookings found for this user." });
@@ -55,7 +53,7 @@ const getUserBookings = asyncHandler(async (req, res) => {
 
 // Controller for booking a session for user-to-expert
 const bookUserToExpertSession = asyncHandler(async (req, res) => {
-  const { expertId, areaOfExpertise,sessionType, sessionDate, sessionTime,firstName, lastName,duration, note, phone } = req.body;
+  const { expertId, areaOfExpertise,sessionType, slots,firstName, lastName,duration, note, phone } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -68,7 +66,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
     const userId = decoded._id;
 
     // Check if the expert's session time and session date are available
-    const isAvailable = await checkAvailability(expertId, sessionDate, sessionTime);
+    const isAvailable = await checkAvailability(expertId);
 
     if (!isAvailable) {
       return res.status(400).json({
@@ -80,8 +78,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
       userId,
       expertId,
       areaOfExpertise,
-      sessionDate, 
-      sessionTime, 
+      slots,
       status: "pending",
       sessionType:"user-to-expert", // Initially set status as 'pending'
       duration, // Duration of the session
