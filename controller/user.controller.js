@@ -163,36 +163,40 @@ const verifyOtp = asyncHandler(async (req, res) => {
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, phone } = req.body;
+
   if (!firstName || !lastName || !email) {
-    throw new ApiError(400, "All fields are required");
+    throw new ApiError(400, "First name, last name, and email are required");
   }
+
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+  // Check if a user already exists with the same email or phone
+  const existingUser = await User.findOne({
+    $or: [
+      { email },
+      ...(normalizedPhone ? [{ phone: normalizedPhone }] : [])
+    ]
+  });
 
   let user;
-  let normalizedPhone = null;
 
-  if (phone) {
-    normalizedPhone = normalizePhoneNumber(phone);
-    user = await User.findOne({ phone: normalizedPhone });
-  } else if (email) {
-    user = await User.findOne({ email });
-  }
+  if (existingUser) {
+    // Update existing user
+    existingUser.firstName = firstName;
+    existingUser.lastName = lastName;
+    existingUser.email = email;
+    if (normalizedPhone) existingUser.phone = normalizedPhone;
 
-  if (!user) {
-    // Create new user if not found
-    user = new User({
+    user = await existingUser.save();
+  } else {
+    // Create new user
+    user = await User.create({
       firstName,
       lastName,
       email,
       phone: normalizedPhone
     });
-  } else {
-    // Update existing user
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.email = email;
   }
-
-  await user.save();
 
   return res.status(201).json(
     new ApiResponse(201, { message: "User registered successfully" })
@@ -261,4 +265,56 @@ const uploadPhoto = asyncHandler(async (req, res) => {
   }
 });
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers};
+
+
+
+// this is comment because at present admin thing that it is illogical to update phone number by admin
+// const updateuserphone = asyncHandler(async (req, res) => {
+//   const { phone, email } = req.body;
+//   const userId = req.params.id;
+
+//   // Check if phone number is provided
+//   if (!phone) {
+//     throw new ApiError(400, "Phone number is required");
+//   }
+
+//   // Check if email exists in DB
+//   const user = await User.findOne({ email });
+
+//   if (!user) {
+//     throw new ApiError(404, "User with this email does not exist");
+//   }
+
+//   // Update the phone number
+//   user.phone = phone;
+//   await user.save();
+
+//   res.status(200).json({
+//     success: true,
+//     message: "Phone number updated successfully",
+//     user,
+//   });
+// });
+
+
+
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  await User.findByIdAndDelete(userId);
+
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
+
+
+
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser};
