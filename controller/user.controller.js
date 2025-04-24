@@ -265,4 +265,56 @@ const uploadPhoto = asyncHandler(async (req, res) => {
   }
 });
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers};
+
+
+
+// this is comment because at present admin thing that it is illogical to update phone number by admin
+// const updateuserphone = asyncHandler(async (req, res) => {
+//   const { phone, email } = req.body;
+//   const userId = req.params.id;
+
+//   // Check if phone number is provided
+//   if (!phone) {
+//     throw new ApiError(400, "Phone number is required");
+//   }
+
+//   // Check if email exists in DB
+//   const user = await User.findOne({ email });
+
+//   if (!user) {
+//     throw new ApiError(404, "User with this email does not exist");
+//   }
+
+//   // Update the phone number
+//   user.phone = phone;
+//   await user.save();
+
+//   res.status(200).json({
+//     success: true,
+//     message: "Phone number updated successfully",
+//     user,
+//   });
+// });
+
+
+
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  await User.findByIdAndDelete(userId);
+
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
+
+
+
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser};

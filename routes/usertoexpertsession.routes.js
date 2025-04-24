@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { 
     bookUserToExpertSession,
-  
+  getBookingDetails,
     getUserBookings,
 } from '../controller/usertoexpertsession.controller.js';
 import VerifyJwt from '../middleware/auth.middleware.js';
@@ -21,6 +21,9 @@ router.post("/usertoexpertsession", bookUserToExpertSession);
 
 // Route for getting user bookings (User's past bookings)
 router.get("/Userbookings", getUserBookings);
+
+router.get("/bookings", getBookingDetails);
+
 
 // // Route for getting expert sessions (Sessions where the expert is providing service)
 // router.get("/sessions", getExpertSessions);
