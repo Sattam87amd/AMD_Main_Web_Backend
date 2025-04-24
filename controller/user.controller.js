@@ -163,36 +163,40 @@ const verifyOtp = asyncHandler(async (req, res) => {
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, phone } = req.body;
+
   if (!firstName || !lastName || !email) {
-    throw new ApiError(400, "All fields are required");
+    throw new ApiError(400, "First name, last name, and email are required");
   }
+
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+  // Check if a user already exists with the same email or phone
+  const existingUser = await User.findOne({
+    $or: [
+      { email },
+      ...(normalizedPhone ? [{ phone: normalizedPhone }] : [])
+    ]
+  });
 
   let user;
-  let normalizedPhone = null;
 
-  if (phone) {
-    normalizedPhone = normalizePhoneNumber(phone);
-    user = await User.findOne({ phone: normalizedPhone });
-  } else if (email) {
-    user = await User.findOne({ email });
-  }
+  if (existingUser) {
+    // Update existing user
+    existingUser.firstName = firstName;
+    existingUser.lastName = lastName;
+    existingUser.email = email;
+    if (normalizedPhone) existingUser.phone = normalizedPhone;
 
-  if (!user) {
-    // Create new user if not found
-    user = new User({
+    user = await existingUser.save();
+  } else {
+    // Create new user
+    user = await User.create({
       firstName,
       lastName,
       email,
       phone: normalizedPhone
     });
-  } else {
-    // Update existing user
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.email = email;
   }
-
-  await user.save();
 
   return res.status(201).json(
     new ApiResponse(201, { message: "User registered successfully" })
