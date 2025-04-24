@@ -65,6 +65,7 @@ const getMySessions = asyncHandler(async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const expertId = decoded._id;
+    console.log(expertId);
 
     // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
     const expertSessions = await ExpertToExpertSession.find({
@@ -100,7 +101,7 @@ const getMySessions = asyncHandler(async (req, res) => {
 
 // Expert-to-Expert session booking controller
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
-  const { consultingExpertId, areaOfExpertise, sessionDate, sessionTime, duration, note,sessionType, firstName, lastName, email, mobile } = req.body;
+  const { consultingExpertId, areaOfExpertise,slots, duration, note,sessionType, firstName, lastName, email, mobile } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -120,7 +121,7 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
     }
 
     // Check if the consulting expert's sessionTime and sessionDate are available
-    const isAvailable = await checkAvailability(consultingExpertId, sessionDate, sessionTime);
+    const isAvailable = await checkAvailability(consultingExpertId, slots);
 
     if (!isAvailable) {
       return res.status(400).json({
@@ -132,8 +133,7 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
       expertId,
       consultingExpertID: consultingExpertId,
       areaOfExpertise,
-      sessionDate, // Session sessionDate in YYYY-MM-DD format
-      sessionTime, // Session sessionTime in HH:mm format
+      slots,
       status: 'pending',
       sessionType: 'expert-to-expert', // Initially set status as 'pending'
       duration, // Duration of the session (e.g., 'Quick-15min')
