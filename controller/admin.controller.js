@@ -1,9 +1,10 @@
-import { Admin } from '../model/admin.model.js'
+import { Admin } from '../model/admin.model.js';
 import asyncHandler from '../utils/asyncHandler.js'
 import ApiError from "../utils/ApiError.js"
 import { Expert } from '../model/expert.model.js';
 import { UserToExpertSession } from '../model/usertoexpertsession.model.js';
 import dotenv from 'dotenv';
+import Rating from '../model/rating.model.js';
 
 dotenv.config()
 
@@ -82,24 +83,37 @@ const getBookingDetails = asyncHandler(async (req, res) => {
   }
 });
 
-const getreviwew=asyncHandler(async (req, res) => {
+const getreview = asyncHandler(async (req, res) => {
   try {
-    const feedback=await Expert.find().select("_id firstName averageRating email")
+    const feedback = await Rating.find()
+      .select("_id expertId raterId rating comment expertType raterType")
+      .populate('expertId')   // Populates expertId based on expertType
+      .populate('raterId');    // Populates raterId (which will always be a User)
+
     const formattedFeedback = feedback.map((feedback) => {
+      const expert = feedback.expertId;
+      const rater = feedback.raterId;
+
       return {
-        expertId: feedback._id.toString().slice(-6), // Shortened MongoDB ID
-        expertName: feedback.firstName,
-        averageRating: feedback.averageRating,
-        email: feedback.email,
+        expertName: expert ? `${expert.firstName} ${expert.lastName}` : "Unknown Expert",
+        raterName: rater ? `${rater.firstName} ${rater.lastName}` : "Unknown User",
+        Rating: feedback.rating,
+        comment: feedback.comment
       };
     });
+
     res.status(200).json({
       success: true,
       feedback: formattedFeedback,
     });
   } catch (error) {
-    throw new ApiError(500, "Failed to fetch booking details")
+    console.error("Error fetching reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch booking details",
+      error: error.message,
+    });
   }
-})
+});
 
-export { loginAdmin, updateExpertStatus, getBookingDetails,getreviwew }
+export { loginAdmin, updateExpertStatus, getBookingDetails,getreview }
