@@ -41,7 +41,10 @@ const usertoexpertsessionSchema = new mongoose.Schema(
       type: String, // Optional note for the appo intment
       default: '',
     },
-    sessionType: { type: String },
+    sessionType: { 
+      type: String,
+      enum: ['user-to-expert']
+     },
 
     zoomMeetingLink: {
       type: String, // Store the Zoom meeting URL

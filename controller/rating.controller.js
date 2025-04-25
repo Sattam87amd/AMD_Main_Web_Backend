@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Rating from '../model/rating.model.js';
 import { ExpertToExpertSession } from '../model/experttoexpertsession.model.js';
 import { Expert } from '../model/expert.model.js';
+import {UserToExpertSession} from '../model/usertoexpertsession.model.js'
 /**
  * @desc    Create a new rating
  * @route   POST /api/ratings
@@ -118,22 +119,32 @@ export const getExpertRating = async (req, res) => {
   }
 };
 
-// Update Booking Status to "Rating Submitted"
 export const updateBookingStatus = async (req, res) => {
-  const { id } = req.params;  // Booking ID passed in the URL
-  const { status } = req.body;  // Status to update (in this case, 'Rating Submitted')
+  const { id } = req.params;
+  const { status, sessionType } = req.body;
 
   if (status !== "Rating Submitted") {
     return res.status(400).json({ message: "Invalid status update" });
   }
 
   try {
-    // Find the booking by ID and update the status
-    const updatedSession = await ExpertToExpertSession.findByIdAndUpdate(
-      id, // The booking's unique ID
-      { status: "Rating Submitted" }, // Set status to 'Rating Submitted'
-      { new: true } // Return the updated document
-    );
+    let updatedSession;
+
+    if (sessionType === "expert-to-expert") {
+      updatedSession = await ExpertToExpertSession.findByIdAndUpdate(
+        id,
+        { status: "Rating Submitted" },
+        { new: true }
+      );
+    } else if (sessionType === "user-to-expert") {
+      updatedSession = await UserToExpertSession.findByIdAndUpdate(
+        id,
+        { status: "Rating Submitted" },
+        { new: true }
+      );
+    } else {
+      return res.status(400).json({ message: "Invalid session type" });
+    }
 
     if (!updatedSession) {
       return res.status(404).json({ message: "Booking not found" });
