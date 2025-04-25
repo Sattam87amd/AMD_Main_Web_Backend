@@ -117,32 +117,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
 //   return match ? parseInt(match[1], 10) : 15;
 // };
 
-const getBookingDetails = asyncHandler(async (req, res) => {
-  try {
-    const bookings = await UserToExpertSession.find().select("areaofexpertise status amount slots _id");
 
-    const formattedBookings = bookings.map((booking) => {
-      const firstSlot = booking.slots?.[0]?.[0]; // First object inside first array of slots
-
-      return {
-        bookingId: booking._id.toString().slice(-6), // Shortened MongoDB ID
-        areaOfExpertise: booking.areaofexpertise,
-        status: booking.status,
-        amount: booking.amount,
-        date: firstSlot
-          ? `${firstSlot.selectedDate} ${firstSlot.selectedTime}`
-          : null,
-      };
-    });
-
-    res.status(200).json({
-      success: true,
-      bookings: formattedBookings,
-    });
-  } catch (error) {
-    throw new ApiError(500, "Failed to fetch booking details");
-  }
-});
 
 
 
@@ -150,7 +125,6 @@ const getBookingDetails = asyncHandler(async (req, res) => {
 export { 
   bookUserToExpertSession,
  getUserBookings,
- getBookingDetails
  };
 
 
