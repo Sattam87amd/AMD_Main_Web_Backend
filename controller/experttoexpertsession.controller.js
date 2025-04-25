@@ -171,17 +171,24 @@ const getDurationInMinutes = (durationStr) => {
   return match ? parseInt(match[1], 10) : 15;
 };
 
+
+// To accept the user request 
 const acceptSession = asyncHandler(async (req, res) => {
   const { id, selectedDate, selectedTime } = req.body; // Get the selected date and time from request body
 
   console.log(id);
   console.log(selectedDate, selectedTime);
-  
+
   try {
-    // Find the session by _id in the ExpertToExpertSession collection
+    // First, check in the ExpertToExpertSession collection
     let session = await ExpertToExpertSession.findById(id);
-    
-    // If no session is found, return an error
+
+    // If not found in ExpertToExpertSession, check in UserToExpertSession collection
+    if (!session) {
+      session = await UserToExpertSession.findById(id);
+    }
+
+    // If the session is still not found, return an error
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
     }
@@ -189,7 +196,7 @@ const acceptSession = asyncHandler(async (req, res) => {
     // Update the slots with the new date and time
     session.slots = [
       {
-        selectedDate: selectedDate, 
+        selectedDate: selectedDate,
         selectedTime: selectedTime
       }
     ];
@@ -198,21 +205,21 @@ const acceptSession = asyncHandler(async (req, res) => {
     session.status = 'confirmed';
 
     // Create the Zoom meeting
-    const startTime = new Date(selectedDate); 
+    const startTime = new Date(selectedDate);
 
     // Handle the time format (e.g., "10:00 am" or "10:00 pm")
     const [time, period] = selectedTime.split(" "); // Split into time and AM/PM period
     const [hours, minutes] = time.split(":"); // Split the time into hours and minutes
-    
+
     let hour = parseInt(hours);
-    
+
     // Convert the hour to 24-hour format
     if (period.toLowerCase() === 'pm' && hour < 12) {
       hour += 12; // Convert PM times to 24-hour format
     } else if (period.toLowerCase() === 'am' && hour === 12) {
       hour = 0; // Handle 12 AM as 00:00 in 24-hour format
     }
-    
+
     startTime.setHours(hour, parseInt(minutes), 0, 0); // Set the hours and minutes in the Date object
 
     const startTimeISO = startTime.toISOString(); // Convert to ISO string
@@ -249,7 +256,7 @@ const acceptSession = asyncHandler(async (req, res) => {
       message: "Session accepted and Zoom meeting created.",
       session,
     });
-    
+
   } catch (error) {
     console.error("Error accepting session:", error);
     res.status(500).json({
@@ -259,9 +266,7 @@ const acceptSession = asyncHandler(async (req, res) => {
   }
 });
 
-
-
-
+//to decline the user request
 const declineSession = asyncHandler(async (req, res) => {
   const { id } = req.body; // Get the session ID from the URL
 

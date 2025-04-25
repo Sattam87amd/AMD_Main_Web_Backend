@@ -14,7 +14,7 @@ router.get("/getexpertsession", VerifyJwt,getMySessions );
 router.get("/mybookings", VerifyJwt, getMyBookings)
 
 //route to handle status of session
-router.put("/accept/:sessionId", VerifyJwt, acceptSession);
-router.put("/decline/:sessionId", VerifyJwt, declineSession);
+router.put("/accept", VerifyJwt, acceptSession);
+router.put("/decline", VerifyJwt, declineSession);
 
 export default router;
