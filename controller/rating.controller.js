@@ -12,7 +12,7 @@ import {UserToExpertSession} from '../model/usertoexpertsession.model.js'
 
 export const createRating = async (req, res) => {
   try {
-    const { expertId, raterId, sessionType, rating, comment } = req.body;
+    const { expertId, raterId, sessionType, rating, comment, raterType } = req.body;
 
     // Basic validations
     if (!expertId || !raterId || !sessionType || rating == null) {
@@ -26,6 +26,7 @@ export const createRating = async (req, res) => {
       sessionType,
       rating,
       comment,
+      raterType,
     });
 
     await newRating.save();

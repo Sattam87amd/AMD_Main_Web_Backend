@@ -31,9 +31,9 @@ const ratingSchema = new mongoose.Schema(
     },
     raterType: {
       type: String,
-      enum: ['User', 'Expert'],  // This field will indicate whether raterId is a User or an Expert
       required: true,
-    }
+      enum: ['User', 'Expert'], // 🛠️ ADD ENUM HERE for safety
+    },
   },
   { timestamps: true }
 );
