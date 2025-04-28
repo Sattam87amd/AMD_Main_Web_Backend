@@ -620,7 +620,6 @@ const updateExpert= async (req, res) => {
   }
 };
 
-
 const updateExpertExperience = async (req, res) => {
   try {
     const expertId = req.body._id || req.params.id;
@@ -641,10 +640,18 @@ const updateExpertExperience = async (req, res) => {
     const { aboutMe, advice } = req.body;
 
     // Map aboutMe to experience field in the database
-    if (aboutMe) expert.experience = aboutMe;
+    if (aboutMe !== undefined) expert.experience = aboutMe;
 
-    // advice should be an array of strings
-    if (Array.isArray(advice)) expert.advice = advice;
+    // Handle advice array updates
+    if (Array.isArray(advice)) {
+      // Filter out empty strings from the incoming advice array
+      const filteredAdvice = advice.filter(item => item && item.trim() !== "");
+      
+      // Replace the entire advice array with the filtered version
+      // This will handle both additions and deletions as the frontend
+      // is sending the complete updated array
+      expert.advice = filteredAdvice;
+    }
 
     await expert.save();
 
@@ -665,8 +672,6 @@ const updateExpertExperience = async (req, res) => {
     });
   }
 };
-
-
 
 
 export {
