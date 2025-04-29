@@ -21,6 +21,33 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
   return !existingSession;
 };
 
+// In your backend controller file
+ const getExpertBookedSlots = asyncHandler(async (req, res) => {
+  const { expertId } = req.params;
+
+  try {
+    const bookedSessions = await ExpertToExpertSession.find({
+      consultingExpertID: expertId,
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] } // Include relevant statuses
+    });
+
+    // Extract slots from all sessions
+    const bookedSlots = bookedSessions.flatMap(session => session.slots);
+
+    res.status(200).json({
+      success: true,
+      data: bookedSlots
+    });
+  } catch (error) {
+    console.error("Error fetching booked slots:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching booked slots",
+      error: error.message
+    });
+  }
+});
+
 /// Controller for "My Bookings" - When the logged-in expert is the one who booked the session (i.e., expertId)
 const getMyBookings = asyncHandler(async (req, res) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
@@ -307,5 +334,7 @@ export {
   getMySessions,
   acceptSession,
   declineSession,
-  getMyBookings
+  getMyBookings,
+  getExpertBookedSlots
+ 
 };

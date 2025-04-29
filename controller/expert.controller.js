@@ -6,11 +6,12 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { upload } from '../middleware/multer.middleware.js';
-import { User } from "../model/user.model.js";
+
 import mongoose from "mongoose";
 import cloudinary from 'cloudinary';
 import streamifier from 'streamifier';
 import nodemailer from 'nodemailer';
+import { User } from '../model/user.model.js';
 dotenv.config();
 
 // LinkedIn URL validation function
@@ -47,11 +48,29 @@ const sendOtp = async (phone) => {
   }
 };
 
+const checkUserExists = async (email, phone) => {
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+  
+  const user = await User.findOne({
+    $or: [
+      { email },
+      ...(normalizedPhone ? [{ phone: normalizedPhone }] : [])
+    ]
+  });
+
+  if (user) {
+    const duplicateField = user.email === email ? 'email' : 'phone';
+    throw new ApiError(400, `This ${duplicateField} is registered as an user. Please use a different ${duplicateField}.`);
+  }
+};
+
 const requestOtp = asyncHandler(async (req, res) => {
   const { phone, email } = req.body;
 
   // Check if either phone or email is provided
   if (!phone && !email) throw new ApiError(400, "Phone or email is required");
+
+  await checkUserExists(email, phone);
 
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
   const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
