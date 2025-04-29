@@ -8,6 +8,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import { uploadToCloudinary } from "../middleware/multer.middleware.js";
 import nodemailer from 'nodemailer';
+import { Expert } from "../model/expert.model.js";
 
 dotenv.config();
 
@@ -66,6 +67,9 @@ const requestOtp = asyncHandler(async (req, res) => {
 
   if (!phone && !email) throw new ApiError(400, "Phone number or email is required");
 
+  // First check if this exists in Expert collection
+  await checkExpertExists(email, phone);
+
   let otp;
   const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
   let user;
@@ -77,6 +81,8 @@ const requestOtp = asyncHandler(async (req, res) => {
     // Phone-based OTP
     const normalizedPhone = normalizePhoneNumber(phone);
     user = await User.findOne({ phone: normalizedPhone });
+    
+  
 
     if (user) {
       user.otp = otp;
@@ -159,6 +165,22 @@ const verifyOtp = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, { isNewUser: false, token }, "OTP verified, login successful"));
 });
 
+const checkExpertExists = async (email, phone) => {
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+  
+  const expert = await Expert.findOne({
+    $or: [
+      { email },
+      ...(normalizedPhone ? [{ phone: normalizedPhone }] : [])
+    ]
+  });
+
+  if (expert) {
+    const duplicateField = expert.email === email ? 'email' : 'phone';
+    throw new ApiError(400, `This ${duplicateField} is registered as an expert. Please use a different ${duplicateField}.`);
+  }
+};
+
 
 // ✅ Register User (Creates a user after OTP verification)
 const registerUser = asyncHandler(async (req, res) => {
@@ -178,13 +200,14 @@ const registerUser = asyncHandler(async (req, res) => {
     ]
   });
 
+  
   let user;
 
   if (existingUser) {
     // Update existing user
     existingUser.firstName = firstName;
     existingUser.lastName = lastName;
-    existingUser.email = email;
+   
     if (normalizedPhone) existingUser.phone = normalizedPhone;
 
     user = await existingUser.save();

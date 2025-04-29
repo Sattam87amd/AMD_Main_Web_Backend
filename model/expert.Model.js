@@ -54,7 +54,7 @@ const expertSchema = new mongoose.Schema(
     otpExpires: Date,
       price: {
         type: Number, // Save price as a number
-        required: true, // Set to true if it is a required field
+        required: false, // Set to true if it is a required field
       },
     role: {
       type: String,
