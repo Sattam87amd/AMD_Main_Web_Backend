@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
     bookUserToExpertSession,
+    getUserBookedSlots,
     getUserBookings,
 } from '../controller/usertoexpertsession.controller.js';
 import VerifyJwt from '../middleware/auth.middleware.js';
@@ -22,7 +23,7 @@ router.post("/usertoexpertsession", bookUserToExpertSession);
 router.get("/Userbookings", getUserBookings);
 
 
-
+router.get('/user-booked-slots/:expertId', getUserBookedSlots)
 
 
 

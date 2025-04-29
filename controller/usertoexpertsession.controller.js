@@ -65,14 +65,14 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const userId = decoded._id;
 
-    // Check if the expert's session time and session date are available
-    const isAvailable = await checkAvailability(expertId);
+    // // Check if the expert's session time and session date are available
+    // const isAvailable = await checkAvailability(expertId);
 
-    if (!isAvailable) {
-      return res.status(400).json({
-        message: "The selected session date and time are already booked. Please select a different time.",
-      });
-    }
+    // if (!isAvailable) {
+    //   return res.status(400).json({
+    //     message: "The selected session date and time are already booked. Please select a different time.",
+    //   });
+    // }
 
     const newSession = new UserToExpertSession({
       userId,
@@ -107,6 +107,33 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
+// In your backend controller file
+ const getUserBookedSlots = asyncHandler(async (req, res) => {
+  const { expertId } = req.params;
+
+  try {
+    const bookedSessions = await UserToExpertSession.find({
+      expertId: expertId,
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] } // Include relevant statuses
+    });
+
+    // Extract slots from all sessions
+    const bookedSlots = bookedSessions.flatMap(session => session.slots);
+
+    res.status(200).json({
+      success: true,
+      data: bookedSlots
+    });
+  } catch (error) {
+    console.error("Error fetching booked slots:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching booked slots",
+      error: error.message
+    });
+  }
+});
+
 
 
 
@@ -125,6 +152,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
 export { 
   bookUserToExpertSession,
  getUserBookings,
+ getUserBookedSlots
  };
 
 
