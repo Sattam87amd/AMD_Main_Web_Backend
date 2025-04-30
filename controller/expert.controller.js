@@ -20,7 +20,15 @@ const validateLinkedInLink = (link) => {
   return linkedinPattern.test(link);
 };
 
-const transporter = nodemailer.createTransport({
+const transporterForOtp = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
+
+const transporterForAdminApproval = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.MAIL_USER,
@@ -97,7 +105,7 @@ const requestOtp = asyncHandler(async (req, res) => {
         otp,
         otpExpires,
         role: "expert",
-        status: "Approved"
+        status: "Pending"
       });
     }
 
@@ -127,7 +135,7 @@ const requestOtp = asyncHandler(async (req, res) => {
         otp,
         otpExpires,
         role: "expert",
-        status: "Approved"
+        status: "Pending"
       });
     }
 
@@ -139,12 +147,31 @@ const requestOtp = asyncHandler(async (req, res) => {
       html: `<p>Your verification code is: <b>${otp}</b></p>`,
     };
 
-    await transporter.sendMail(mailOptions);
+    await transporterForOtp.sendMail(mailOptions);
     console.log(`OTP sent to email: ${email}`);
   }
 
   // Save the expert data to the database
   await expert.save();
+
+  // Send registration confirmation email
+  try {
+    const mailOptionsForAdmin = {
+      from: `"AMD Expert Portal" <${process.env.MAIL_USER}>`,
+      to: expert.email,
+      subject: "Registration Submitted Successfully",
+      html: `<p>Dear ${expert.firstName},</p>
+             <p>Your registration has been submitted successfully. Please wait for admin approval before you can log in.</p>
+             <p>Thank you for your patience.</p>`,
+    };
+
+    await transporterForAdminApproval.sendMail(mailOptionsForAdmin);
+    console.log(`Registration confirmation email sent to ${expert.email}`);
+  } catch (emailError) {
+    console.error("Error sending registration email:", emailError);
+  }
+
+ 
 
   // Respond with success message
   res.status(200).json(new ApiResponse(200, { isNewExpert }, "OTP sent successfully"));
@@ -176,6 +203,11 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
   // Check if registration is complete
   if (expert.firstName && expert.lastName && expert.email) {
+    // Check if expert's account is approved
+    if (expert.status !== "Approved") {
+      throw new ApiError(403, "Your account is pending approval. Please wait for admin approval before logging in.");
+    }
+
     const token = jwt.sign(
       {
         _id: expert._id,
@@ -419,7 +451,7 @@ const registerExpert = async (req, res) => {
       expert.price = price;
       expert.photoFile = photoUrl;
       expert.certificationFile = certificationUrl;
-      expert.status = "Approved";
+      expert.status = "Pending";
     } else {
       // If still not found, create a new one
       expert = new Expert({
@@ -435,7 +467,7 @@ const registerExpert = async (req, res) => {
         photoFile: photoUrl,
         certificationFile: certificationUrl,
         role: "expert",
-        status: "Approved",
+        status: "Pending",
       });
     }
 
