@@ -95,9 +95,10 @@ const getreview = asyncHandler(async (req, res) => {
       const rater = feedback.raterId;
 
       return {
+        _id: feedback._id,  // Include the review ID
         expertName: expert ? `${expert.firstName} ${expert.lastName}` : "Unknown Expert",
         raterName: rater ? `${rater.firstName} ${rater.lastName}` : "Unknown User",
-        Rating: feedback.rating,
+        Rating: feedback.rating,  // Keep consistent with frontend expected structure
         comment: feedback.comment
       };
     });
@@ -110,7 +111,7 @@ const getreview = asyncHandler(async (req, res) => {
     console.error("Error fetching reviews:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch booking details",
+      message: "Failed to fetch reviews",
       error: error.message,
     });
   }
