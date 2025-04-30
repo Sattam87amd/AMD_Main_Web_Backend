@@ -141,7 +141,7 @@ const requestOtp = asyncHandler(async (req, res) => {
 
     // Send OTP via email for email login
     const mailOptions = {
-      from: `"AMD Expert Portal" <${process.env.MAIL_USER}>`,
+      from: `"Shourk Support" <${process.env.MAIL_USER}>`,
       to: email,
       subject: "Your OTP Code",
       html: `<p>Your verification code is: <b>${otp}</b></p>`,
@@ -157,7 +157,7 @@ const requestOtp = asyncHandler(async (req, res) => {
   // Send registration confirmation email
   try {
     const mailOptionsForAdmin = {
-      from: `"AMD Expert Portal" <${process.env.MAIL_USER}>`,
+      from: `"Shourk Support" <${process.env.MAIL_USER}>`,
       to: expert.email,
       subject: "Registration Submitted Successfully",
       html: `<p>Dear ${expert.firstName},</p>
