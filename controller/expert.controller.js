@@ -154,22 +154,7 @@ const requestOtp = asyncHandler(async (req, res) => {
   // Save the expert data to the database
   await expert.save();
 
-  // Send registration confirmation email
-  try {
-    const mailOptionsForAdmin = {
-      from: `"Shourk Support" <${process.env.MAIL_USER}>`,
-      to: expert.email,
-      subject: "Registration Submitted Successfully",
-      html: `<p>Dear ${expert.firstName},</p>
-             <p>Your registration has been submitted successfully. Please wait for admin approval before you can log in.</p>
-             <p>Thank you for your patience.</p>`,
-    };
-
-    await transporterForAdminApproval.sendMail(mailOptionsForAdmin);
-    console.log(`Registration confirmation email sent to ${expert.email}`);
-  } catch (emailError) {
-    console.error("Error sending registration email:", emailError);
-  }
+  
 
  
 
