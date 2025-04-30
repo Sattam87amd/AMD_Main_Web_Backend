@@ -58,28 +58,48 @@ const updateExpertStatus = async (req, res) => {
 
 const getBookingDetails = asyncHandler(async (req, res) => {
   try {
-    const bookings = await UserToExpertSession.find().select("areaOfExpertise status amount slots _id");
-
+    // Extract user ID from query parameters
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    
+    // Build filter condition
+    
+    // Fetch bookings with user filter
+    const bookings = await UserToExpertSession.find({ userId }) // Filter by userId, not _id
+    .select("areaOfExpertise status amount slots userId");
+ 
+    
+    // Format bookings data
     const formattedBookings = bookings.map((booking) => {
-      const firstSlot = booking.slots?.[0]?.[0]; // First object inside first array of slots
-
+      const firstSlot = booking.slots?.[0]?.[0]; // Safely access first slot
       return {
-        bookingId: booking._id.toString().slice(-6), // Shortened MongoDB ID
-        areaOfExpertise: booking.areaOfExpertise,
-        status: booking.status,
-        amount: booking.amount,
+        bookingId: booking._id.toString().slice(-6), // Last 6 chars of ID
+        areaOfExpertise: booking.areaOfExpertise || "General Consultation",
+        status: booking.status || "Pending",
+        amount: booking.amount ? `$${booking.amount}` : "N/A",
         date: firstSlot
           ? `${firstSlot.selectedDate} ${firstSlot.selectedTime}`
-          : null,
+          : "No slot available",
       };
     });
-
+    
     res.status(200).json({
       success: true,
       bookings: formattedBookings,
     });
   } catch (error) {
-    throw new ApiError(500, "Failed to fetch booking details");
+    console.error('Error in getBookingDetails:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch booking details",
+      error: error.message
+    });
   }
 });
 
