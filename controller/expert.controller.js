@@ -94,6 +94,8 @@ const requestOtp = asyncHandler(async (req, res) => {
     expert = await Expert.findOne({ phone: normalizedPhone });
     isNewExpert = !expert?.email; // Check if email is not set, meaning it's a new expert
 
+    
+
     if (expert) {
       // Update existing expert's OTP
       expert.otp = otp;
@@ -186,13 +188,15 @@ const verifyOtp = asyncHandler(async (req, res) => {
   expert.otpExpires = undefined;
   await expert.save();
 
-  // Check if registration is complete
-  if (expert.firstName && expert.lastName && expert.email) {
-    // Check if expert's account is approved
-    if (expert.status !== "Approved") {
-      throw new ApiError(403, "Your account is pending approval. Please wait for admin approval before logging in.");
-    }
-
+  
+// Check if registration is complete
+if (expert.firstName && expert.lastName && expert.email) {
+  // Check if expert's account is approved
+  if (expert.status !== "Approved") {
+    throw new ApiError(403, "Your account is pending approval. Please wait for admin approval before logging in.");
+  }
+    
+    
     const token = jwt.sign(
       {
         _id: expert._id,
@@ -409,6 +413,23 @@ const registerExpert = async (req, res) => {
       // Save category field
 
       await expert.save();
+
+      // Send registration confirmation email
+  try {
+    const mailOptionsForAdmin = {
+      from: `"Shourk Support" <${process.env.MAIL_USER}>`,
+      to: expert.email,
+      subject: "Registration Submitted Successfully",
+      html: `<p>Dear ${expert.firstName},</p>
+             <p>Your registration has been submitted successfully. Please wait for admin approval before you can log in.</p>
+             <p>Thank you for your patience.</p>`,
+    };
+
+    await transporterForAdminApproval.sendMail(mailOptionsForAdmin);
+    console.log(`Registration confirmation email sent to ${expert.email}`);
+  } catch (emailError) {
+    console.error("Error sending registration email:", emailError);
+  }
 
       return res.status(201).json(new ApiResponse(201, expert, 'Expert registered and profile completed successfully.'));
     }
