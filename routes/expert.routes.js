@@ -9,6 +9,7 @@ import {
   getExpertById,
   getExpertsByArea,
   updateExpertCharity,
+  updateExpertPrice,
   getExperts,
   updateExpert,
   updateExpertExperience 
@@ -38,7 +39,9 @@ router.get("/:id", getExpertById);
 router.get("/", getExperts)
 router.get("/area/:area", getExpertsByArea)
 router.put("/update-charity", updateExpertCharity);
+router.put("/update-price", updateExpertPrice);
 router.put('/:id', updateExpert);
 router.put('/:id/experience', updateExpertExperience);
+
 
 export default router;
