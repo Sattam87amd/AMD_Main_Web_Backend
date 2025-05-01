@@ -552,6 +552,8 @@ const getExpertsByArea = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, experts, "Experts fetched successfully"));
 });
 
+
+
 // Controller for updating the charity settings
 const updateExpertCharity = async (req, res) => {
   try {
@@ -608,7 +610,45 @@ const updateExpertCharity = async (req, res) => {
   }
 };
 
+const updateExpertPrice = async (req, res) => {
+  try {
+    const { price } = req.body;
+    const expertId = req.headers.expertid;
 
+    if (!expertId) {
+      return res.status(400).json({
+        success: false,
+        message: "Expert ID is required",
+      });
+    }
+
+    const expert = await Expert.findByIdAndUpdate(
+      expertId,
+      { price },
+      { new: true }
+    );
+
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: "Expert not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Price updated successfully",
+      data: { price: expert.price },
+    });
+  } catch (error) {
+    console.error("Error updating expert price:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
 
 const calculateAge = (dob) => {
   const today = new Date();
@@ -677,6 +717,8 @@ const updateExpert= async (req, res) => {
   }
 };
 
+
+
 const updateExpertExperience = async (req, res) => {
   try {
     const expertId = req.body._id || req.params.id;
@@ -740,6 +782,8 @@ export {
   logoutExpert,
   getExpertsByArea,
   updateExpertCharity,
+  updateExpertPrice,
   updateExpert,
-  updateExpertExperience 
+  updateExpertExperience
+  
 };
