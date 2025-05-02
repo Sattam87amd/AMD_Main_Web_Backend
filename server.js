@@ -15,6 +15,7 @@ import ratingRoutes from './routes/rating.routes.js'; // <-- Import the rating r
 import { getExperts } from './controller/expert.controller.js';
 import adminRoutes from './routes/admin.routes.js';
 import sessionRoutes from './routes/session.routes.js';
+import cancelRoutes from './routes/cancel.route.js'; // <-- Import the cancel routes
 import axios from 'axios'; // <-- Import axios
 
 // Load environment variables
@@ -48,6 +49,7 @@ app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter);
 app.use('/api/session', VerifyJwt, experttoexpertsessionRouter, usertoexpertsessionRouter);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use("/api/session", cancelRoutes);
 
 // Add the countries route here
 app.get('/api/countries', async (req, res) => {
