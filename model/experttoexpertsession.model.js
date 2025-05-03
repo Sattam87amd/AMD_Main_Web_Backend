@@ -65,6 +65,9 @@ const experttoexpertsessionSchema = new Schema({
         type: String, // Store the Zoom meeting password (if available)
         default: '',
       },
+      paymentStatus:{type:String},
+      paymentId:{type:String},
+      paymentAmount:{type:String}
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt fields
   );

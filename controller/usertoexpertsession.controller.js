@@ -1,7 +1,9 @@
-import  {UserToExpertSession} from '../model/usertoexpertsession.model.js' // Import the session model
-import jwt from 'jsonwebtoken'; // For JWT token validation
+import { UserToExpertSession } from '../model/usertoexpertsession.model.js'
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import asyncHandler from '../utils/asyncHandler.js'; // Assuming you have an asyncHandler utility
+import asyncHandler from '../utils/asyncHandler.js';
+import axios from 'axios'; // Import axios for TAP API calls
+import { createZoomMeeting } from '../utils/createZoomMeeting.js'; // Import Zoom meeting creation
 
 dotenv.config();
 
@@ -14,6 +16,51 @@ const checkAvailability = async (expertId) => {
   return !existingSession; // Returns true if no session is found, i.e., time is available
 };
 
+// Function to create a TAP payment
+const createTapPayment = async (sessionData, price, successRedirectUrl, cancelRedirectUrl) => {
+  try {
+    const payload = {
+      amount: price,
+      currency: "SAR", // Change to your currency
+      customer: {
+        first_name: sessionData.firstName,
+        last_name: sessionData.lastName,
+        email: sessionData.email,
+        phone: {
+          country_code: "+971", // Default to UAE, adjust as needed
+          number: sessionData.phone
+        }
+      },
+      source: { id: "src_card" },
+      redirect: {
+        url: successRedirectUrl
+      },
+      post: {
+        url: cancelRedirectUrl
+      },
+      metadata: {
+        sessionId: sessionData._id.toString(),
+        sessionType: "user-to-expert"
+      }
+    };
+
+    const response = await axios.post(
+      "https://api.tap.company/v2/charges",
+      payload,
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.TAP_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error creating TAP payment:", error.response?.data || error);
+    throw new Error("Payment gateway error: " + (error.response?.data?.message || error.message));
+  }
+};
 
 // Controller for "My Bookings" - When the logged-in user is the one who booked the session (userId)
 const getUserBookings = asyncHandler(async (req, res) => {
@@ -33,7 +80,6 @@ const getUserBookings = asyncHandler(async (req, res) => {
     })
       .populate("userId", "firstName lastName")
       .populate("expertId", "firstName lastName")
-      
       // .sort({ sessionDate: 1 });
 
     if (!sessions.length) {
@@ -50,10 +96,21 @@ const getUserBookings = asyncHandler(async (req, res) => {
   }
 });
 
-
-// Controller for booking a session for user-to-expert
+// Controller for booking a session for user-to-expert with TAP payment integration
 const bookUserToExpertSession = asyncHandler(async (req, res) => {
-  const { expertId, areaOfExpertise,sessionType, slots,firstName, lastName,duration, note, phone } = req.body;
+  const { 
+    expertId, 
+    areaOfExpertise, 
+    sessionType, 
+    slots, 
+    firstName, 
+    lastName, 
+    duration, 
+    note, 
+    phone, 
+    email,
+    price // Price from frontend
+  } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -65,39 +122,53 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const userId = decoded._id;
 
-    // // Check if the expert's session time and session date are available
-    // const isAvailable = await checkAvailability(expertId);
-
-    // if (!isAvailable) {
-    //   return res.status(400).json({
-    //     message: "The selected session date and time are already booked. Please select a different time.",
-    //   });
-    // }
-
+    // Create a new user-to-expert session with initial status 'unconfirmed'
     const newSession = new UserToExpertSession({
       userId,
       expertId,
       areaOfExpertise,
       slots,
-      status: "pending",
-      sessionType:"user-to-expert", // Initially set status as 'pending'
-      duration, // Duration of the session
+      status: "unconfirmed",
+      sessionType: "user-to-expert",
+      duration,
       note,
       firstName,
       lastName,
-      phone
+      phone,
+      email,
+      price: price || 0, // Store the price
+      paymentStatus: 'pending', // Add payment status field
+      paymentAmount: price || 0 // Store payment amount
     });
 
     await newSession.save();
 
-    // Update session status to 'unconfirmed'
-    newSession.status = "unconfirmed";
+    // Define redirect URLs
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const successRedirectUrl = `${baseUrl}/userpanel/videocall?sessionId=${newSession._id}`;
+    const cancelRedirectUrl = `${baseUrl}/userpanel/booking?sessionId=${newSession._id}`;
+
+    // Create TAP payment
+    const paymentData = await createTapPayment(
+      newSession, 
+      price || 0, 
+      successRedirectUrl,
+      cancelRedirectUrl
+    );
+
+    // Save payment reference in session
+    newSession.paymentReference = paymentData.id;
+    newSession.paymentId = paymentData.id; // Save payment ID
     await newSession.save();
 
+    // Return payment URL and session info
     res.status(201).json({
-      message: "User-to-expert session booked successfully. Status: unconfirmed.",
+      message: "Session created. Redirecting to payment.",
       session: newSession,
+      paymentUrl: paymentData.transaction.url,
+      paymentId: paymentData.id
     });
+
   } catch (error) {
     console.error("Error booking user-to-expert session:", error);
     res.status(500).json({
@@ -108,7 +179,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
 });
 
 // In your backend controller file
- const getUserBookedSlots = asyncHandler(async (req, res) => {
+const getUserBookedSlots = asyncHandler(async (req, res) => {
   const { expertId } = req.params;
 
   try {
@@ -134,26 +205,73 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
+// Payment success handler - API endpoint for success redirect
+const handlePaymentSuccess = asyncHandler(async (req, res) => {
+  const { sessionId, tap_id } = req.query;
 
+  try {
+    // Verify payment status with TAP API
+    const paymentVerification = await axios.get(
+      `https://api.tap.company/v2/charges/${tap_id}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.TAP_SECRET_KEY}`
+        }
+      }
+    );
 
+    const paymentStatus = paymentVerification.data.status;
+    const paymentAmount = paymentVerification.data.amount;
+    
+    // Find and update the session
+    const session = await UserToExpertSession.findById(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
 
-// // Helper function to get the duration in minutes from the string format
-// const getDurationInMinutes = (durationStr) => {
-//   if (typeof durationStr === "number") return durationStr;
-//   const match = durationStr.match(/(\d+)/);
-//   return match ? parseInt(match[1], 10) : 15;
-// };
+    if (paymentStatus === "CAPTURED") {
+      // Update session with payment details
+      session.status = "unconfirmed"; // Change status to unconfirmed when payment is successful
+      session.paymentStatus = "completed";
+      session.paymentId = tap_id;
+      session.paymentAmount = paymentAmount;
+      
+      await session.save();
+      
+      // Return success with redirect URL
+      return res.status(200).json({
+        success: true,
+        message: "Payment successful. Session status updated to unconfirmed.",
+        redirectUrl: `/userpanel/videocall?sessionId=${sessionId}`
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Payment not completed",
+        paymentStatus
+      });
+    }
+  } catch (error) {
+    console.error("Payment success handler error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error processing payment success", 
+      error: error.message 
+    });
+  }
+});
 
-
-
-
-
+// Helper function to get the duration in minutes from the string format
+const getDurationInMinutes = (durationStr) => {
+  if (typeof durationStr === "number") return durationStr;
+  const match = durationStr.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 15;
+};
 
 export { 
   bookUserToExpertSession,
- getUserBookings,
- getUserBookedSlots
- };
-
-
-
+  getUserBookings,
+  getUserBookedSlots,
+  handlePaymentSuccess
+};

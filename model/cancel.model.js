@@ -11,7 +11,7 @@ const cancelSchema = new mongoose.Schema({
     required: true,
     enum: ['UserToExpertSession', 'ExpertToExpertSession']
   },
-  userId: {
+  Id: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     refPath: 'userModel' // Dynamic reference to user/expert model

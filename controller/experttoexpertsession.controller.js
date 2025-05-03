@@ -1,14 +1,15 @@
 import { ExpertToExpertSession } from "../model/experttoexpertsession.model.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import asyncHandler from "../utils/asyncHandler.js"; // Assuming you have this utility
-import ApiError from "../utils/ApiError.js"; // Assuming this is your custom error handler
+import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
 import { createZoomMeeting } from '../utils/createZoomMeeting.js';
 import { UserToExpertSession } from "../model/usertoexpertsession.model.js";
+import axios from "axios"; // Make sure to import axios
 
 dotenv.config();
 
-// Helper function to check if the consulting expert's session sessionTime is available
+// Helper function to check if the consulting expert's session time is available
 const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) => {
   // Find if there is any session already booked for the consulting expert at the same sessionTime and sessionDate
   const existingSession = await ExpertToExpertSession.findOne({
@@ -21,14 +22,60 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
   return !existingSession;
 };
 
-// In your backend controller file
- const getExpertBookedSlots = asyncHandler(async (req, res) => {
+// Function to create a TAP payment
+const createTapPayment = async (sessionData, price, successRedirectUrl, cancelRedirectUrl) => {
+  try {
+    const payload = {
+      amount: price,
+      currency: "SAR", // Change to your currency
+      customer: {
+        first_name: sessionData.firstName,
+        last_name: sessionData.lastName,
+        email: sessionData.email,
+        phone: {
+          country_code: "+971", // Default to UAE, adjust as needed
+          number: sessionData.mobile
+        }
+      },
+      source: { id: "src_card" },
+      redirect: {
+        url: successRedirectUrl
+      },
+      post: {
+        url: cancelRedirectUrl
+      },
+      metadata: {
+        sessionId: sessionData._id.toString(),
+        sessionType: "expert-to-expert"
+      }
+    };
+
+    const response = await axios.post(
+      "https://api.tap.company/v2/charges",
+      payload,
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.TAP_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error creating TAP payment:", error.response?.data || error);
+    throw new Error("Payment gateway error: " + (error.response?.data?.message || error.message));
+  }
+};
+
+// Get expert booked slots
+const getExpertBookedSlots = asyncHandler(async (req, res) => {
   const { expertId } = req.params;
 
   try {
     const bookedSessions = await ExpertToExpertSession.find({
       consultingExpertID: expertId,
-      status: { $in: ['pending', 'confirmed', 'unconfirmed'] } // Include relevant statuses
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] }
     });
 
     // Extract slots from all sessions
@@ -48,7 +95,7 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
   }
 });
 
-/// Controller for "My Bookings" - When the logged-in expert is the one who booked the session (i.e., expertId)
+// Controller for "My Bookings" - When the logged-in expert is the one who booked the session
 const getMyBookings = asyncHandler(async (req, res) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -60,7 +107,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const expertId = decoded._id;
 
-    // Find sessions where the logged-in expert is the one who booked the session (expertId)
+    // Find sessions where the logged-in expert is the one who booked the session
     const sessions = await ExpertToExpertSession.find({
       expertId: expertId,
     })
@@ -94,7 +141,7 @@ const getMySessions = asyncHandler(async (req, res) => {
     const expertId = decoded._id;
     console.log(expertId);
 
-    // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
+    // Find sessions where the logged-in expert is the consulting expert
     const expertSessions = await ExpertToExpertSession.find({
       consultingExpertID: expertId,
     })
@@ -102,14 +149,13 @@ const getMySessions = asyncHandler(async (req, res) => {
       .populate("consultingExpertID", "firstName lastName")
       .sort({ expertSessionDate: 1 });
 
-    // Find sessions where the logged-in expert is the consulting expert (consultingExpertID)
+    // Find sessions where the logged-in expert is the consulting expert
     const userSessions = await UserToExpertSession.find({
       expertId: expertId,
     })
       .populate("userId", "firstName lastName")
       .populate("expertId", "firstName lastName");
       
-
     // Check if both expertSessions and userSessions are empty
     if (expertSessions.length === 0 && userSessions.length === 0) {
       return res.status(404).json({ message: "No sessions found for this expert." });
@@ -126,9 +172,21 @@ const getMySessions = asyncHandler(async (req, res) => {
   }
 });
 
-// Expert-to-Expert session booking controller
+// Expert-to-Expert session booking controller with TAP payment integration
 const bookExpertToExpertSession = asyncHandler(async (req, res) => {
-  const { consultingExpertId, areaOfExpertise,slots, duration, note,sessionType, firstName, lastName, email, mobile } = req.body;
+  const { 
+    consultingExpertId, 
+    areaOfExpertise, 
+    slots, 
+    duration, 
+    note, 
+    sessionType, 
+    firstName, 
+    lastName, 
+    email, 
+    mobile,
+    price // Price from frontend
+  } = req.body;
 
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
@@ -142,46 +200,66 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
 
     if (expertId === consultingExpertId) {
       return res.status(400).json({
-        message:
-          "An expert cannot book a session with themselves. Please select a different consulting expert.",
+        message: "An expert cannot book a session with themselves. Please select a different consulting expert.",
       });
     }
 
-    // Check if the consulting expert's sessionTime and sessionDate are available
+    // Check if the consulting expert's slots are available
     const isAvailable = await checkAvailability(consultingExpertId, slots);
 
     if (!isAvailable) {
       return res.status(400).json({
-        message: 'The selected sessionDate and sessionTime are already booked for the consulting expert. Please select a different sessionTime.',
+        message: 'The selected slots are already booked for the consulting expert. Please select different times.',
       });
     }
 
+    // Create a session with pending status
     const newSession = new ExpertToExpertSession({
       expertId,
       consultingExpertID: consultingExpertId,
       areaOfExpertise,
       slots,
-      status: 'pending',
-      sessionType: 'expert-to-expert', // Initially set status as 'pending'
-      duration, // Duration of the session (e.g., 'Quick-15min')
+      status: 'unconfirmed', // Initially set status as 'pending'
+      sessionType: 'expert-to-expert',
+      duration,
       note,
-      firstName,   // Save the user data
+      firstName,
       lastName,
       mobile,
-      email, // Optional note for the session
+      email,
+      price: price || 0, // Store the price
+      paymentStatus: 'pending', // Add payment status field
+      paymentAmount: price || 0 // Store payment amount
     });
 
     await newSession.save();
 
-    // UpsessionDate the session status to 'unconfirmed' (no payment confirmation yet)
-    newSession.status = 'unconfirmed';
+    // Define redirect URLs
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const successRedirectUrl = `${baseUrl}/expertpanel/videocall?sessionId=${newSession._id}`;
+    const cancelRedirectUrl = `${baseUrl}/expertpanel/expertbooking?sessionId=${newSession._id}`;
+
+    // Create TAP payment
+    const paymentData = await createTapPayment(
+      newSession, 
+      price || 0, 
+      successRedirectUrl,
+      cancelRedirectUrl
+    );
+
+    // Save payment reference in session
+    newSession.paymentReference = paymentData.id;
+    newSession.paymentId = paymentData.id; // Save payment ID
     await newSession.save();
 
+    // Return payment URL and session info
     res.status(201).json({
-      message:
-        "Expert-to-Expert session booked successfully. Status: unconfirmed.",
+      message: "Session created. Redirecting to payment.",
       session: newSession,
+      paymentUrl: paymentData.transaction.url,
+      paymentId: paymentData.id
     });
+
   } catch (error) {
     console.error("Error booking Expert-to-Expert session:", error);
     res.status(500).json({
@@ -191,17 +269,111 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
-// Helper: Convert "Quick - 15min" → 15
-const getDurationInMinutes = (durationStr) => {
-  if (typeof durationStr === "number") return durationStr;
-  const match = durationStr.match(/(\d+)/);
-  return match ? parseInt(match[1], 10) : 15;
-};
+// Payment webhook handler
+const handlePaymentWebhook = asyncHandler(async (req, res) => {
+  try {
+    const { id, metadata, status, amount } = req.body;
+    
+    if (!metadata || !metadata.sessionId) {
+      return res.status(400).json({ message: "Invalid webhook data: missing session ID" });
+    }
 
+    // Find the session
+    let session;
+    if (metadata.sessionType === "expert-to-expert") {
+      session = await ExpertToExpertSession.findById(metadata.sessionId);
+    } else {
+      session = await UserToExpertSession.findById(metadata.sessionId);
+    }
+
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    // Update session based on payment status
+    if (status === "CAPTURED" || status === "PAID" || status === "AUTHORIZED") {
+      session.status = "unconfirmed"; // Session created but needs expert confirmation
+      session.paymentStatus = "completed";
+      session.paymentId = id;
+      session.paymentAmount = amount;
+    } else if (status === "FAILED" || status === "CANCELLED" || status === "DECLINED" || status === "UNAUTHORIZED") {
+      session.status = "payment_failed";
+      session.paymentStatus = "failed";
+      session.paymentId = id;
+    } else {
+      session.paymentStatus = status.toLowerCase();
+      session.paymentId = id;
+    }
+
+    await session.save();
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Payment webhook error:", error);
+    res.status(500).json({ message: "Error processing payment webhook", error: error.message });
+  }
+});
+
+// Payment success handler - API endpoint for success redirect
+const handlePaymentSuccess = asyncHandler(async (req, res) => {
+  const { sessionId, tap_id } = req.query;
+
+  try {
+    // Verify payment status with TAP API
+    const paymentVerification = await axios.get(
+      `https://api.tap.company/v2/charges/${tap_id}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.TAP_SECRET_KEY}`
+        }
+      }
+    );
+
+    const paymentStatus = paymentVerification.data.status;
+    const paymentAmount = paymentVerification.data.amount;
+    
+    // Find and update the session
+    const session = await ExpertToExpertSession.findById(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    if (paymentStatus === "CAPTURED") {
+      // Update session with payment details
+      session.status = "unconfirmed"; // Change status to unconfirmed when payment is successful
+      session.paymentStatus = "completed";
+      session.paymentId = tap_id;
+      session.paymentAmount = paymentAmount;
+      
+      await session.save();
+      
+      // Return success with redirect URL
+      return res.status(200).json({
+        success: true,
+        message: "Payment successful. Session status updated to unconfirmed.",
+        redirectUrl: `/expertpanel/videocall?sessionId=${sessionId}`
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Payment not completed",
+        paymentStatus
+      });
+    }
+  } catch (error) {
+    console.error("Payment success handler error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error processing payment success", 
+      error: error.message 
+    });
+  }
+});
 
 // To accept the user request 
 const acceptSession = asyncHandler(async (req, res) => {
-  const { id, selectedDate, selectedTime } = req.body; // Get the selected date and time from request body
+  const { id, selectedDate, selectedTime } = req.body;
 
   console.log(id);
   console.log(selectedDate, selectedTime);
@@ -218,6 +390,11 @@ const acceptSession = asyncHandler(async (req, res) => {
     // If the session is still not found, return an error
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
+    }
+
+    // Check if payment is completed for expert sessions
+    if (session.collection.name === 'experttoexpertsessions' && session.paymentStatus !== 'completed') {
+      return res.status(400).json({ message: "Cannot accept session with incomplete payment" });
     }
 
     // Update the slots with the new date and time
@@ -250,7 +427,7 @@ const acceptSession = asyncHandler(async (req, res) => {
     startTime.setHours(hour, parseInt(minutes), 0, 0); // Set the hours and minutes in the Date object
 
     const startTimeISO = startTime.toISOString(); // Convert to ISO string
-    const duration = 15; // Assume 15-minute duration as per the booking details
+    const durationMinutes = session.duration ? getDurationInMinutes(session.duration) : 15;
 
     try {
       console.log("📞 Creating Zoom meeting...");
@@ -258,7 +435,7 @@ const acceptSession = asyncHandler(async (req, res) => {
         "aquibhingwala@gmail.com", // Replace with your licensed Zoom email
         `Session with ${session.firstName || session.userFirstName} ${session.lastName || session.userLastName}`,
         startTimeISO,
-        duration
+        durationMinutes
       );
 
       // Update the session with Zoom meeting details
@@ -293,9 +470,16 @@ const acceptSession = asyncHandler(async (req, res) => {
   }
 });
 
-//to decline the user request
+// Helper: Convert "Quick - 15min" → 15
+const getDurationInMinutes = (durationStr) => {
+  if (typeof durationStr === "number") return durationStr;
+  const match = durationStr.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 15;
+};
+
+// To decline the user request
 const declineSession = asyncHandler(async (req, res) => {
-  const { id } = req.body; // Get the session ID from the URL
+  const { id } = req.body;
 
   try {
     // Try to find the session in both ExpertToExpertSession and UserToExpertSession
@@ -314,6 +498,39 @@ const declineSession = asyncHandler(async (req, res) => {
     session.status = "rejected";
     await session.save();
 
+    // If payment was completed, initiate refund
+    if (session.paymentStatus === 'completed' && session.paymentReference) {
+      try {
+        // Initiate refund with TAP
+        await axios.post(
+          `https://api.tap.company/v2/refunds`,
+          {
+            charge_id: session.paymentReference,
+            amount: session.price || session.paymentAmount,
+            currency: "SAR", // Use the same currency as the charge
+            reason: "Session declined by expert",
+            customer: {
+              first_name: session.firstName,
+              last_name: session.lastName,
+              email: session.email
+            }
+          },
+          {
+            headers: {
+              "Authorization": `Bearer ${process.env.TAP_SECRET_KEY}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        
+        session.paymentStatus = "refunded";
+        await session.save();
+      } catch (refundError) {
+        console.error("Error processing refund:", refundError);
+        // Still mark session as rejected, but log the refund error
+      }
+    }
+
     res.status(200).json({
       message: "Session rejected successfully.",
       session,
@@ -327,14 +544,13 @@ const declineSession = asyncHandler(async (req, res) => {
   }
 });
 
-
-
 export {
   bookExpertToExpertSession,
   getMySessions,
   acceptSession,
   declineSession,
   getMyBookings,
-  getExpertBookedSlots
- 
+  getExpertBookedSlots,
+  handlePaymentWebhook,
+  handlePaymentSuccess
 };

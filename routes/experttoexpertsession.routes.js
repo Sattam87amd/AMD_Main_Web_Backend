@@ -6,7 +6,8 @@ import {
   getMyBookings,
   declineSession,
   acceptSession,
-  getExpertBookedSlots
+  getExpertBookedSlots,
+  handlePaymentWebhook
 } from "../controller/experttoexpertsession.controller.js";
 const router = Router();
 
@@ -19,5 +20,8 @@ router.put("/accept", VerifyJwt, acceptSession);
 router.put("/decline", VerifyJwt, declineSession);
 
 router.get('/booked-slots/:expertId', getExpertBookedSlots);
+
+router.post('/session/payment-webhook', handlePaymentWebhook);
+
 
 export default router;
