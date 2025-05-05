@@ -15,11 +15,9 @@ import { Cancel } from "../model/cancel.model.js";
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
     const Id = decodedToken._id;
     const Role = decodedToken.role; // assuming your token payload has `role`
-      console.log("Decoded Token:", decodedToken);
-    console.log("User ID:", Id);
-    console.log("User Role:", Role);
+     
     const { sessionId, reasons, otherReason } = req.body;
-    console.log("Session ID:", sessionId);
+    
     let session = "";
     let sessionModel = "";
 
@@ -32,7 +30,7 @@ import { Cancel } from "../model/cancel.model.js";
     } else {
       return res.status(400).json({ success: false, message: "Invalid role in token" });
     }
-    console.log("Session found:", session);
+    
     if (!session) {
       return res.status(404).json({
         success: false,

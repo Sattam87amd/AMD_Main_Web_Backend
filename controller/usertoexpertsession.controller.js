@@ -34,7 +34,7 @@ const checkAvailability = async (expertId, sessionDate, sessionTime) => {
     return !existingExpertSession;
     
   } catch (error) {
-    console.log("Error checking availability:", error);
+   
     throw new ApiError("Error checking availability", 500);
   }
 };

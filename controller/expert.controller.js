@@ -48,7 +48,7 @@ const sendOtp = async (phone) => {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to ${phone}`); // ✅ Fixed console log
+
     return otp;
   } catch (error) {
     console.error("Error sending OTP via Twilio:", error);
@@ -117,7 +117,7 @@ const requestOtp = asyncHandler(async (req, res) => {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to phone: ${phone}`);
+
   }
 
   // Handle email login
@@ -150,7 +150,7 @@ const requestOtp = asyncHandler(async (req, res) => {
     };
 
     await transporterForOtp.sendMail(mailOptions);
-    console.log(`OTP sent to email: ${email}`);
+   
   }
 
   // Save the expert data to the database
@@ -342,7 +342,7 @@ const uploadToCloudinary = (fileBuffer, folder, resource_type = 'image') => {
 const registerExpert = async (req, res) => {
   try {
     // Log the received files
-    console.log('Received files:', req.files);
+
 
     // Extract data from the request body
     const {
@@ -426,7 +426,7 @@ const registerExpert = async (req, res) => {
     };
 
     await transporterForAdminApproval.sendMail(mailOptionsForAdmin);
-    console.log(`Registration confirmation email sent to ${expert.email}`);
+   
   } catch (emailError) {
     console.error("Error sending registration email:", emailError);
   }
