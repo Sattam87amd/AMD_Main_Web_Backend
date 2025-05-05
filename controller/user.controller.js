@@ -226,6 +226,27 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 });
 
+
+const refreshToken = asyncHandler(async (req, res) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findById(decoded._id);
+    
+    const newToken = jwt.sign(
+      { _id: user._id, email: user.email, role: "user" },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ newToken });
+  } catch (error) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+
 const getUsers = asyncHandler(async (req, res) => {
   try {
     const users = await User.find();  // Fetch all users from the database
@@ -340,4 +361,4 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser};
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser, refreshToken};

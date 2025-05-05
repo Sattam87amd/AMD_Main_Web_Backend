@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requestOtp, uploadPhoto, verifyOtp, registerUser, getUserById, getUsers,deleteUser } from '../controller/user.controller.js'; // Import the getUsers controller
+import { requestOtp, uploadPhoto, verifyOtp, registerUser, getUserById, getUsers,deleteUser, refreshToken } from '../controller/user.controller.js'; // Import the getUsers controller
 import VerifyJwt from '../middleware/auth.middleware.js';
 import multer from 'multer';
 const router = Router();
@@ -21,6 +21,9 @@ router.post('/verify-otp', verifyOtp);
 router.post('/registeruser', registerUser);
 
 router.get("/:id", getUserById);
+
+
+router.post('/refresh-token', VerifyJwt, refreshToken);
 
 
 

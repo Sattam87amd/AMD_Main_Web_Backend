@@ -144,7 +144,7 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
     await newSession.save();
 
     // Define redirect URLs
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const baseUrl = req.headers.origin || process.env.FRONTEND_URL || "https://www.shourk.com";
     const successRedirectUrl = `${baseUrl}/userpanel/videocall?sessionId=${newSession._id}`;
     const cancelRedirectUrl = `${baseUrl}/userpanel/booking?sessionId=${newSession._id}`;
 
