@@ -18,6 +18,19 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
     sessionTime,
   });
 
+  if(!existingSession){
+    try {
+      await UserToExpertSession.findOne({
+        expertId:consultingExpertId,
+        sessionDate,
+        sessionTime
+      })
+    } catch (error) {
+      console.log("Error checking availability:", error);
+      throw new ApiError("Error checking availability", 500);
+    }
+  }
+
   // If no session is found, it means the sessionTime is available
   return !existingSession;
 };
