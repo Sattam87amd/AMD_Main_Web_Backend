@@ -49,7 +49,7 @@ app.use('/api/usersession', VerifyJwt, usertoexpertsessionRouter);
 app.use('/api/session', VerifyJwt, experttoexpertsessionRouter, usertoexpertsessionRouter);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/ratings', ratingRoutes);
-app.use("/api/session", cancelRoutes);
+app.use("/api/cancelsession", cancelRoutes);
 
 // Add the countries route here
 app.get('/api/countries', async (req, res) => {

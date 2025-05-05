@@ -11,15 +11,33 @@ dotenv.config();
 
 // Helper function to check if the consulting expert's session time is available
 const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) => {
-  // Find if there is any session already booked for the consulting expert at the same sessionTime and sessionDate
-  const existingSession = await ExpertToExpertSession.findOne({
-    consultingExpertID: consultingExpertId,
-    sessionDate,
-    sessionTime,
-  });
-
-  // If no session is found, it means the sessionTime is available
-  return !existingSession;
+  try {
+    // Find if there is any session already booked for the consulting expert at the same sessionTime and sessionDate
+    const existingExpertSession = await ExpertToExpertSession.findOne({
+      consultingExpertID: consultingExpertId,
+      sessionDate,
+      sessionTime,
+    });
+    
+    // If expert-to-expert session exists, time is not available
+    if (existingExpertSession) {
+      return false;
+    }
+    
+    // Now check if there's a user-to-expert session booked
+    const existingUserSession = await UserToExpertSession.findOne({
+      expertId: consultingExpertId,
+      sessionDate,
+      sessionTime
+    });
+    
+    // If no session is found in either collection, the time is available
+    return !existingUserSession;
+    
+  } catch (error) {
+    console.log("Error checking availability:", error);
+    throw new ApiError("Error checking availability", 500);
+  }
 };
 
 // Function to create a TAP payment
