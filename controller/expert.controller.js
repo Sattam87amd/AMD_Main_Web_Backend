@@ -505,7 +505,7 @@ const refreshToken = asyncHandler(async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.status(200).json({ token: newToken });
+    res.status(200).json({ newToken });
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });
   }
