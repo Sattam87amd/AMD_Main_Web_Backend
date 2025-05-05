@@ -486,6 +486,31 @@ const registerExpert = async (req, res) => {
   }
 };
 
+// Add this to your expertauth.controller.js file
+const refreshToken = asyncHandler(async (req, res) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const expert = await Expert.findById(decoded._id);
+    
+    if (!expert) {
+      return res.status(404).json({ message: "Expert not found" });
+    }
+    
+    const newToken = jwt.sign(
+      { _id: expert._id, email: expert.email, role: "expert" },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(200).json({ token: newToken });
+  } catch (error) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+
 
 const logoutExpert = asyncHandler(async (req, res) => {
   await Expert.findByIdAndUpdate(
@@ -784,6 +809,6 @@ export {
   updateExpertCharity,
   updateExpertPrice,
   updateExpert,
-  updateExpertExperience
-  
+  updateExpertExperience,
+  refreshToken
 };
