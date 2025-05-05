@@ -86,22 +86,35 @@ const createTapPayment = async (sessionData, price, successRedirectUrl, cancelRe
   }
 };
 
-// Get expert booked slots
+// Get expert booked slots from both ExpertToExpertSession and UserToExpertSession collections
 const getExpertBookedSlots = asyncHandler(async (req, res) => {
   const { expertId } = req.params;
 
   try {
-    const bookedSessions = await ExpertToExpertSession.find({
+    // Find booked slots in ExpertToExpertSession
+    const expertToExpertSessions = await ExpertToExpertSession.find({
       consultingExpertID: expertId,
       status: { $in: ['pending', 'confirmed', 'unconfirmed'] }
     });
-
-    // Extract slots from all sessions
-    const bookedSlots = bookedSessions.flatMap(session => session.slots);
+    
+    // Find booked slots in UserToExpertSession
+    const userToExpertSessions = await UserToExpertSession.find({
+      expertId: expertId,
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] }
+    });
+    
+    // Extract slots from expert-to-expert sessions
+    const expertToExpertSlots = expertToExpertSessions.flatMap(session => session.slots);
+    
+    // Extract slots from user-to-expert sessions
+    const userToExpertSlots = userToExpertSessions.flatMap(session => session.slots);
+    
+    // Combine slots from both collections
+    const allBookedSlots = [...expertToExpertSlots, ...userToExpertSlots];
 
     res.status(200).json({
       success: true,
-      data: bookedSlots
+      data: allBookedSlots
     });
   } catch (error) {
     console.error("Error fetching booked slots:", error);
@@ -222,14 +235,14 @@ const bookExpertToExpertSession = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if the consulting expert's slots are available
-    const isAvailable = await checkAvailability(consultingExpertId, slots);
+    // // Check if the consulting expert's slots are available
+    // const isAvailable = await checkAvailability(consultingExpertId, slots);
 
-    if (!isAvailable) {
-      return res.status(400).json({
-        message: 'The selected slots are already booked for the consulting expert. Please select different times.',
-      });
-    }
+    // if (!isAvailable) {
+    //   return res.status(400).json({
+    //     message: 'The selected slots are already booked for the consulting expert. Please select different times.',
+    //   });
+    // }
 
     // Create a session with pending status
     const newSession = new ExpertToExpertSession({

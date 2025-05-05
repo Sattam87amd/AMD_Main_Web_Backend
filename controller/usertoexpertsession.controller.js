@@ -200,22 +200,35 @@ const bookUserToExpertSession = asyncHandler(async (req, res) => {
   }
 });
 
-// In your backend controller file
+// Get user booked slots from both UserToExpertSession and ExpertToExpertSession collections
 const getUserBookedSlots = asyncHandler(async (req, res) => {
   const { expertId } = req.params;
 
   try {
-    const bookedSessions = await UserToExpertSession.find({
+    // Find booked slots in UserToExpertSession
+    const userToExpertSessions = await UserToExpertSession.find({
       expertId: expertId,
-      status: { $in: ['pending', 'confirmed', 'unconfirmed'] } // Include relevant statuses
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] }
     });
-
-    // Extract slots from all sessions
-    const bookedSlots = bookedSessions.flatMap(session => session.slots);
+    
+    // Find booked slots in ExpertToExpertSession where this expert is the consulting expert
+    const expertToExpertSessions = await ExpertToExpertSession.find({
+      consultingExpertID: expertId,
+      status: { $in: ['pending', 'confirmed', 'unconfirmed'] }
+    });
+    
+    // Extract slots from user-to-expert sessions
+    const userToExpertSlots = userToExpertSessions.flatMap(session => session.slots);
+    
+    // Extract slots from expert-to-expert sessions
+    const expertToExpertSlots = expertToExpertSessions.flatMap(session => session.slots);
+    
+    // Combine slots from both collections
+    const allBookedSlots = [...userToExpertSlots, ...expertToExpertSlots];
 
     res.status(200).json({
       success: true,
-      data: bookedSlots
+      data: allBookedSlots
     });
   } catch (error) {
     console.error("Error fetching booked slots:", error);
