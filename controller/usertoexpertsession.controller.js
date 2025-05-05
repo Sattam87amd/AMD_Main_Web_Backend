@@ -7,13 +7,35 @@ import { createZoomMeeting } from '../utils/createZoomMeeting.js'; // Import Zoo
 
 dotenv.config();
 
-// Function to check if the session time is available
-const checkAvailability = async (expertId) => {
-  const existingSession = await UserToExpertSession.findOne({
-    expertId,
-  });
-
-  return !existingSession; // Returns true if no session is found, i.e., time is available
+// User-side controller to check if the session time is available
+const checkAvailability = async (expertId, sessionDate, sessionTime) => {
+  try {
+    // Check if there's a user-to-expert session already booked
+    const existingUserSession = await UserToExpertSession.findOne({
+      expertId,
+      sessionDate,
+      sessionTime
+    });
+    
+    // If user-to-expert session exists, time is not available
+    if (existingUserSession) {
+      return false;
+    }
+    
+    // Also check if there's an expert-to-expert session booked
+    const existingExpertSession = await ExpertToExpertSession.findOne({
+      consultingExpertID: expertId,  // Assuming this is the field name in your schema
+      sessionDate,
+      sessionTime
+    });
+    
+    // Time is available only if neither type of session exists
+    return !existingExpertSession;
+    
+  } catch (error) {
+    console.log("Error checking availability:", error);
+    throw new ApiError("Error checking availability", 500);
+  }
 };
 
 // Function to create a TAP payment
