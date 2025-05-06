@@ -221,8 +221,14 @@ const registerUser = asyncHandler(async (req, res) => {
     });
   }
 
+  const token = jwt.sign(
+    { _id: user._id, phone: user.phone, email: user.email, role: "user" },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
+
   return res.status(201).json(
-    new ApiResponse(201, { message: "User registered successfully" })
+    new ApiResponse(201, { token, message: "User registered successfully" }, "User registered successfully")
   );
 });
 
