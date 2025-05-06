@@ -4,6 +4,9 @@ import cancelSession from "../controller/cancelsession.controller.js"; // Adjust
 const router = express.Router();
 
 
-router.post("/cancel", cancelSession);
+router.post("/canceluser", cancelSession);
+
+
+router.post("/cancelexpert", cancelSession);
 
 export default router;
