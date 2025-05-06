@@ -35,7 +35,7 @@ const checkAvailability = async (consultingExpertId, sessionDate, sessionTime) =
     return !existingUserSession;
     
   } catch (error) {
-    console.log("Error checking availability:", error);
+  
     throw new ApiError("Error checking availability", 500);
   }
 };
@@ -170,7 +170,7 @@ const getMySessions = asyncHandler(async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const expertId = decoded._id;
-    console.log(expertId);
+    
 
     // Find sessions where the logged-in expert is the consulting expert
     const expertSessions = await ExpertToExpertSession.find({
@@ -406,8 +406,6 @@ const handlePaymentSuccess = asyncHandler(async (req, res) => {
 const acceptSession = asyncHandler(async (req, res) => {
   const { id, selectedDate, selectedTime } = req.body;
 
-  console.log(id);
-  console.log(selectedDate, selectedTime);
 
   try {
     // First, check in the ExpertToExpertSession collection
@@ -461,7 +459,7 @@ const acceptSession = asyncHandler(async (req, res) => {
     const durationMinutes = session.duration ? getDurationInMinutes(session.duration) : 15;
 
     try {
-      console.log("📞 Creating Zoom meeting...");
+    
       const zoomData = await createZoomMeeting(
         "aquibhingwala@gmail.com", // Replace with your licensed Zoom email
         `Session with ${session.firstName || session.userFirstName} ${session.lastName || session.userLastName}`,
@@ -476,7 +474,7 @@ const acceptSession = asyncHandler(async (req, res) => {
 
       // Save the updated session
       await session.save();
-      console.log("✅ Zoom meeting created and session updated!");
+
 
     } catch (zoomErr) {
       console.error("❌ Zoom API Error:", zoomErr.response?.data || zoomErr.message);

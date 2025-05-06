@@ -35,7 +35,7 @@ const sendOtpToPhone = async (phone) => {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone,
     });
-    console.log(`OTP sent to ${phone}`);
+  
     return otp;
   } catch (error) {
     console.error("Error sending OTP via Twilio:", error);
@@ -54,7 +54,7 @@ const sendOtpToEmail = async (email, otp) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`OTP sent to email: ${email}`);
+    
   } catch (error) {
     console.error("Error sending OTP via Email:", error);
     throw new ApiError(500, "Failed to send OTP via email");

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import asyncHandler from '../utils/asyncHandler.js';
 import axios from 'axios'; // Import axios for TAP API calls
 import { createZoomMeeting } from '../utils/createZoomMeeting.js'; // Import Zoom meeting creation
+import { ExpertToExpertSession } from '../model/experttoexpertsession.model.js'; // Import ExpertToExpertSession model
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ const checkAvailability = async (expertId, sessionDate, sessionTime) => {
     return !existingExpertSession;
     
   } catch (error) {
-    console.log("Error checking availability:", error);
+   
     throw new ApiError("Error checking availability", 500);
   }
 };
