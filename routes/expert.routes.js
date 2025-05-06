@@ -13,7 +13,8 @@ import {
   getExperts,
   updateExpert,
   updateExpertExperience,
-  refreshToken
+  refreshToken,
+  updateExpertProfile
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -45,6 +46,7 @@ router.put('/:id', updateExpert);
 router.put('/:id/experience', updateExpertExperience);
 
 router.post('/refresh-token', VerifyJwt, refreshToken);
+router.put('/updateexpert/:id',updateExpertProfile);
 
 
 export default router;

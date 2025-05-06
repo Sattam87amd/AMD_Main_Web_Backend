@@ -340,7 +340,60 @@ const uploadPhoto = asyncHandler(async (req, res) => {
 //   });
 // });
 
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, phone, email } = req.body;
 
+    // Optional: Validate input data
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide all required fields' 
+      });
+    }
+
+    // Find the user model in your database
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user fields
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.phone = phone;
+    user.email = email;
+
+    // Save the updated user
+    const updatedUser = await user.save();
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        phone: updatedUser.phone,
+        email: updatedUser.email,
+        photoFile: updatedUser.photoFile
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating profile',
+      error: error.message 
+    });
+  }
+};
 
 
 const deleteUser = asyncHandler(async (req, res) => {
@@ -361,4 +414,4 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 
 
-export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser, refreshToken};
+export { requestOtp, verifyOtp, registerUser, getUserProfile, getUserById, uploadPhoto, getUsers ,deleteUser, refreshToken, updateUser};
