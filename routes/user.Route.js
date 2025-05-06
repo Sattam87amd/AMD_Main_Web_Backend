@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requestOtp, uploadPhoto, verifyOtp, registerUser, getUserById, getUsers,deleteUser, refreshToken } from '../controller/user.controller.js'; // Import the getUsers controller
+import { requestOtp, uploadPhoto, verifyOtp, registerUser, getUserById, getUsers,deleteUser, refreshToken, updateUser } from '../controller/user.controller.js'; // Import the getUsers controller
 import VerifyJwt from '../middleware/auth.middleware.js';
 import multer from 'multer';
 const router = Router();
@@ -30,6 +30,7 @@ router.post('/refresh-token', VerifyJwt, refreshToken);
 // router.put("/updatephone", updateuserphone)
 router.delete("/deleteuser/:id", deleteUser);
 
+router.put('/updateuser/:id',updateUser);
 
 
 

@@ -742,7 +742,60 @@ const updateExpert= async (req, res) => {
   }
 };
 
+const updateExpertProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, phone, email } = req.body;
 
+    // Optional: Validate input data
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide all required fields' 
+      });
+    }
+
+    // Find the user model in your database
+    const expert = await Expert.findById(id);
+    
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update expert fields
+   expert.firstName = firstName;
+   expert.lastName = lastName;
+   expert.phone = phone;
+   expert.email = email;
+
+    // Save the updated expert
+    const updatedExpertProfile = await expert.save();
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        firstName: updatedExpertProfile.firstName,
+        lastName: updatedExpertProfile.lastName,
+        phone: updatedExpertProfile.phone,
+        email: updatedExpertProfile.email,
+        photoFile: updatedExpertProfile.photoFile
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating profile',
+      error: error.message 
+    });
+  }
+};
 
 const updateExpertExperience = async (req, res) => {
   try {
@@ -810,5 +863,6 @@ export {
   updateExpertPrice,
   updateExpert,
   updateExpertExperience,
-  refreshToken
+  refreshToken,
+  updateExpertProfile
 };
