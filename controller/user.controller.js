@@ -8,9 +8,16 @@ import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import { uploadToCloudinary } from "../middleware/multer.middleware.js";
 import nodemailer from 'nodemailer';
+import SibApiV3Sdk from 'sib-api-v3-sdk'; 
 import { Expert } from "../model/expert.model.js";
 
 dotenv.config();
+
+
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+const apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -43,23 +50,23 @@ const sendOtpToPhone = async (phone) => {
   }
 };
 
-// ✅ Helper function: Send OTP via Email
+// ✅ Helper function: Send OTP via Email using Brevo
 const sendOtpToEmail = async (email, otp) => {
   try {
-    const mailOptions = {
-      from: `"Your App" <${process.env.MAIL_USER}>`,
-      to: email,
-      subject: "Your OTP Code",
-      html: `<p>Your OTP is: <b>${otp}</b></p>`,
-    };
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    sendSmtpEmail.sender = { email: process.env.BREVO_EMAIL }; // Use your Brevo email
+    sendSmtpEmail.to = [{ email: email }];
+    sendSmtpEmail.subject = 'Your OTP Code';
+    sendSmtpEmail.htmlContent = `<p>Your OTP is: <b>${otp}</b></p>`;
 
-    await transporter.sendMail(mailOptions);
-    
+    // Send email using Brevo API
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
   } catch (error) {
-    console.error("Error sending OTP via Email:", error);
+    console.error("Error sending OTP via Brevo:", error);
     throw new ApiError(500, "Failed to send OTP via email");
   }
 };
+
 
 // ✅ Request OTP (Sends OTP and stores it in the database)
 const requestOtp = asyncHandler(async (req, res) => {
