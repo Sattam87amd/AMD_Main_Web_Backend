@@ -14,7 +14,8 @@ import {
   updateExpert,
   updateExpertExperience,
   refreshToken,
-  updateExpertProfile
+  updateExpertProfile,
+  loginPendingExpert
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ const router = express.Router();
 // Public Routes
 router.post("/request-otp", requestOtp);
 router.post("/verify-otp", verifyOtp);
+router.post('/pending-login', loginPendingExpert);
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
