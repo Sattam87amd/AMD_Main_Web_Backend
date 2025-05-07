@@ -183,43 +183,58 @@ const verifyOtp = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid or expired OTP");
   }
 
-  // OTP is valid – clear it
+  // Clear OTP fields
   expert.otp = undefined;
   expert.otpExpires = undefined;
   await expert.save();
 
-  
-// Check if registration is complete
-if (expert.firstName && expert.lastName && expert.email) {
-  // Check if expert's account is approved
-  if (expert.status !== "Approved") {
-    throw new ApiError(403, "Your account is pending approval. Please wait for admin approval before logging in.");
-  }
-    
-    
+  // Check registration completeness
+  if (expert.firstName && expert.lastName && expert.email) {
+    // Add status to token payload
+    const tokenPayload = {
+      _id: expert._id,
+      role: "expert",
+      status: expert.status,
+      ...(phone && { phone: expert.phone }),
+      ...(email && { email: expert.email }),
+    };
+
+    // Different expiration for pending vs approved
+    const tokenExpiration = expert.status === "Pending" ? "24h" : "7d";
+
     const token = jwt.sign(
-      {
-        _id: expert._id,
-        role: "expert",
-        status: "Approved",
-        ...(phone && { phone: expert.phone }),  // Include phone only if available
-        ...(email && { email: expert.email }),  // Include email only if available
-      },
+      tokenPayload,
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: tokenExpiration }
     );
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, { isNewExpert: false, token }, "OTP verified - login successful"));
+    return res.status(200).json(
+      new ApiResponse(
+        200, 
+        {
+          isNewExpert: false,
+          token,
+          status: expert.status,
+          redirectTo: expert.status === "Pending" 
+            ? "/reviewingexpertpanel/expertpanelprofile" 
+            : "/expertpanel/expertpanelprofile"
+        },
+        expert.status === "Pending" 
+          ? "OTP verified - account pending approval" 
+          : "OTP verified - login successful"
+      )
+    );
   }
 
-  // Registration not complete, return data to complete the registration
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { isNewExpert: true }, "OTP verified - complete registration"));
+  // Handle incomplete registration
+  return res.status(200).json(
+    new ApiResponse(
+      200, 
+      { isNewExpert: true }, 
+      "OTP verified - complete registration"
+    )
+  );
 });
-
 
 
 // Merged registerExpert Controller
@@ -851,6 +866,84 @@ const updateExpertExperience = async (req, res) => {
 };
 
 
+
+// Helper function to generate a limited token for pending experts
+const generatePendingToken = (expert) => {
+  // Create a token with limited permissions and shorter expiry
+  return jwt.sign(
+    { 
+      id: expert._id,
+      role: expert.role,
+      status: expert.status,
+      isPending: true, // Special flag for pending experts
+      // You can add other limited permissions here
+      permissions: ['read-only']
+    },
+    process.env.JWT_SECRET || 'your_jwt_secret',
+    { expiresIn: '24h' } // Shorter expiration time for pending experts
+  );
+};
+
+const loginPendingExpert = asyncHandler(async (req, res) => {
+  const { email, phone } = req.body;
+
+  // Check if either email or phone is provided
+  if (!email && !phone) {
+    throw new ApiError(400, "Email or phone is required");
+  }
+
+  let expert;
+  if (email) {
+    expert = await Expert.findOne({ email });
+  } else {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    expert = await Expert.findOne({ phone: normalizedPhone });
+  }
+
+  if (!expert) {
+    throw new ApiError(404, "Expert not found");
+  }
+
+  // Check if expert status is Pending
+  if (expert.status !== "Pending") {
+    throw new ApiError(403, "This endpoint is only for experts with Pending status");
+  }
+
+  // Generate a limited access token for pending experts
+  const token = jwt.sign(
+    {
+      _id: expert._id,
+      role: "expert",
+      status: "Pending",
+      isPending: true,
+      permissions: ["read-only"] // Limited permissions
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "24h" } // Shorter expiration for pending experts
+  );
+
+  // Return token and redirect path
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        token,
+        redirectTo: "/reviewingexpertpanel", // Frontend should handle this redirect
+        expert: {
+          _id: expert._id,
+          firstName: expert.firstName,
+          lastName: expert.lastName,
+          email: expert.email,
+          phone: expert.phone,
+          status: expert.status
+        }
+      },
+      "Logged in as pending expert"
+    )
+  );
+});
+
+
 export {
   requestOtp,
   verifyOtp,
@@ -864,5 +957,7 @@ export {
   updateExpert,
   updateExpertExperience,
   refreshToken,
-  updateExpertProfile
+  updateExpertProfile,
+  loginPendingExpert,
+
 };
