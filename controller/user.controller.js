@@ -8,16 +8,13 @@ import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import { uploadToCloudinary } from "../middleware/multer.middleware.js";
 import nodemailer from 'nodemailer';
-import SibApiV3Sdk from 'sib-api-v3-sdk'; 
+// import SibApiV3Sdk from 'sib-api-v3-sdk'; 
 import { Expert } from "../model/expert.model.js";
 
 dotenv.config();
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-const apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -51,21 +48,32 @@ const sendOtpToPhone = async (phone) => {
 };
 
 // ✅ Helper function: Send OTP via Email using Brevo
+import sgMail from '@sendgrid/mail';
+
+// Set API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 const sendOtpToEmail = async (email, otp) => {
   try {
-    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.sender = { email: process.env.BREVO_EMAIL }; // Use your Brevo email
-    sendSmtpEmail.to = [{ email: email }];
-    sendSmtpEmail.subject = 'Your OTP Code';
-    sendSmtpEmail.htmlContent = `<p>Your OTP is: <b>${otp}</b></p>`;
+    const msg = {
+      to: email,
+      from: {
+        email: process.env.SENDGRID_EMAIL, // verified sender in SendGrid
+        name: 'Your App Name',
+      },
+      subject: 'Your Verification Code',
+      text: `Your verification code is: ${otp}`,
+      html: `<strong>Your verification code is: ${otp}</strong>`,
+    };
 
-    // Send email using Brevo API
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    await sgMail.send(msg);
+    console.log('OTP email sent successfully via SendGrid');
   } catch (error) {
-    console.error("Error sending OTP via Brevo:", error);
-    throw new ApiError(500, "Failed to send OTP via email");
+    console.error('Error sending OTP via SendGrid:', error.response?.body || error);
+    throw new ApiError(500, 'Failed to send OTP via email');
   }
 };
+
 
 
 // ✅ Request OTP (Sends OTP and stores it in the database)
