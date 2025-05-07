@@ -4,7 +4,7 @@ import { UserToExpertSession } from "../model/usertoexpertsession.model.js";
 import { ExpertToExpertSession } from "../model/experttoexpertsession.model.js";
 import { Cancel } from "../model/cancel.model.js";
 
- const cancelSession = async (req, res) => {
+const cancelSession = async (req, res) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
   if (!token) {
@@ -12,25 +12,36 @@ import { Cancel } from "../model/cancel.model.js";
   }
 
   try {
-    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     const Id = decodedToken._id;
-    const Role = decodedToken.role; // assuming your token payload has `role`
-     
-    const { sessionId, reasons, otherReason } = req.body;
-    
-    let session = "";
-    let sessionModel = "";
+    const Role = decodedToken.role;
 
-    if (Role === "user") {
-      session = await UserToExpertSession.findOne({ _id: sessionId, userId: Id });
-      sessionModel = "UserToExpertSession";
-    } else if (Role === "expert") {
-      session = await ExpertToExpertSession.findOne({ _id: sessionId, expertId: Id });
-      sessionModel = "ExpertToExpertSession";
-    } else {
-      return res.status(400).json({ success: false, message: "Invalid role in token" });
+    const { sessionId, reasons, otherReason, sessionModel } = req.body; // Destructure sessionModel from req.body
+
+    let session;
+    let SessionModel;
+
+    // Determine the model and query based on sessionModel from request
+    switch (sessionModel) {
+      case "ExpertToExpertSession":
+        SessionModel = ExpertToExpertSession;
+        session = await SessionModel.findOne({ 
+          _id: sessionId, 
+          consultingExpertID: Id // Correct field name for expert in ExpertToExpertSession
+        });
+        break;
+      case "UserToExpertSession":
+        SessionModel = UserToExpertSession;
+        // Check if the user is the expert (expertID) or the user (userId) based on their role
+        const query = Role === "expert" 
+          ? { _id: sessionId, expertId: Id } 
+          : { _id: sessionId, userId: Id };
+        session = await SessionModel.findOne(query);
+        break;
+      default:
+        return res.status(400).json({ success: false, message: "Invalid session model" });
     }
-    
+
     if (!session) {
       return res.status(404).json({
         success: false,
@@ -58,8 +69,7 @@ import { Cancel } from "../model/cancel.model.js";
 
     await cancelEntry.save();
 
-    // Delete session from correct model
-    const SessionModel = sessionModel === "UserToExpertSession" ? UserToExpertSession : ExpertToExpertSession;
+    // Delete session from the correct model (already determined by sessionModel)
     await SessionModel.deleteOne({ _id: sessionId });
 
     return res.status(200).json({
@@ -73,6 +83,5 @@ import { Cancel } from "../model/cancel.model.js";
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 export default cancelSession 

@@ -64,6 +64,9 @@ const usertoexpertsessionSchema = new mongoose.Schema(
      email: { type: String },
      phone: { type: String },
 
+     paymentStatus:{type:String},
+      paymentId:{type:String},
+      paymentAmount:{type:String}
   },
   { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );
