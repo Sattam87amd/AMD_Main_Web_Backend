@@ -1,6 +1,5 @@
 import express from "express";
 import multer from 'multer';
-//import upload from "../middleware/multer.middleware.js";
 import VerifyJwt from "../middleware/auth.middleware.js";
 import {
   requestOtp,
@@ -15,7 +14,8 @@ import {
   updateExpertExperience,
   refreshToken,
   updateExpertProfile,
-  loginPendingExpert
+  loginPendingExpert,
+  updateExpertProfilePicture
 } from "../controller/expert.controller.js";
 
 const router = express.Router();
@@ -28,7 +28,7 @@ router.post('/pending-login', loginPendingExpert);
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Use upload.fields to handle multiple file fields
+// Registration route with file uploads
 router.post(
   '/register',
   upload.fields([
@@ -37,18 +37,36 @@ router.post(
   ]),
   registerExpert
 );
-// Protected Routes
 
+// Protected Routes
 router.get("/:id", getExpertById);
-router.get("/", getExperts)
-router.get("/area/:area", getExpertsByArea)
+router.get("/", getExperts);
+router.get("/area/:area", getExpertsByArea);
 router.put("/update-charity", updateExpertCharity);
 router.put("/update-price", updateExpertPrice);
 router.put('/:id', updateExpert);
 router.put('/:id/experience', updateExpertExperience);
-
 router.post('/refresh-token', VerifyJwt, refreshToken);
-router.put('/updateexpert/:id',updateExpertProfile);
 
+// Profile update routes
+// Single route that handles both regular updates and file uploads
+router.put(
+  '/updateexpert/:id',
+  upload.fields([{ name: 'photoFile', maxCount: 1 }]),
+  updateExpertProfile
+);
+
+// Alternative: Separate routes for clarity (you can choose either approach)
+/*
+// Regular profile update route (no file upload)
+router.put('/updateexpert/:id/info', updateExpertProfile);
+
+// Profile picture specific route
+router.put(
+  '/updateexpert/:id/profilepicture',
+  upload.fields([{ name: 'photoFile', maxCount: 1 }]),
+  updateExpertProfilePicture
+);
+*/
 
 export default router;

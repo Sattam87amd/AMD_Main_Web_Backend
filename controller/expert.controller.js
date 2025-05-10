@@ -757,12 +757,92 @@ const updateExpert= async (req, res) => {
   }
 };
 
+
+
+// Add this new controller function for updating profile picture specifically
+const updateExpertProfilePicture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if a file was uploaded
+    if (!req.files || !req.files.photoFile || !req.files.photoFile[0]) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No image file provided' 
+      });
+    }
+
+    // Find the expert
+    const expert = await Expert.findById(id);
+    
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expert not found'
+      });
+    }
+
+    // Upload the new photo to Cloudinary
+    const photoFile = req.files.photoFile[0];
+    const photoResult = await uploadToCloudinary(photoFile, 'experts/photos');
+    
+    // Update the expert's photo URL
+    expert.photoFile = photoResult.secure_url;
+    await expert.save();
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture updated successfully',
+      data: {
+        photoFile: expert.photoFile
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating profile picture',
+      error: error.message 
+    });
+  }
+};
+
 const updateExpertProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const { firstName, lastName, phone, email } = req.body;
 
-    // Optional: Validate input data
+    // Find the expert
+    const expert = await Expert.findById(id);
+    
+    if (!expert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expert not found'
+      });
+    }
+
+    // Check if this is a file upload request
+    if (req.files && req.files.photoFile && req.files.photoFile[0]) {
+      // Handle profile picture upload
+      const photoFile = req.files.photoFile[0];
+      const photoResult = await uploadToCloudinary(photoFile, 'experts/photos');
+      expert.photoFile = photoResult.secure_url;
+      
+      // Save and return immediately for image upload
+      await expert.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Profile picture updated successfully',
+        data: {
+          photoFile: expert.photoFile
+        }
+      });
+    }
+
+    // Handle regular profile updates
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ 
         success: false, 
@@ -770,21 +850,11 @@ const updateExpertProfile = async (req, res) => {
       });
     }
 
-    // Find the user model in your database
-    const expert = await Expert.findById(id);
-    
-    if (!expert) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
     // Update expert fields
-   expert.firstName = firstName;
-   expert.lastName = lastName;
-   expert.phone = phone;
-   expert.email = email;
+    expert.firstName = firstName;
+    expert.lastName = lastName;
+    expert.phone = phone;
+    expert.email = email;
 
     // Save the updated expert
     const updatedExpertProfile = await expert.save();
@@ -811,6 +881,9 @@ const updateExpertProfile = async (req, res) => {
     });
   }
 };
+
+
+
 
 const updateExpertExperience = async (req, res) => {
   try {
@@ -959,5 +1032,6 @@ export {
   refreshToken,
   updateExpertProfile,
   loginPendingExpert,
+  updateExpertProfilePicture,
 
 };
